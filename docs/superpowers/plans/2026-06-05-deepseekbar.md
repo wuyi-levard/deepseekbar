@@ -2529,6 +2529,31 @@ const DEFAULTS: LineOpts = {
   fill: "rgba(59,130,246,0.10)",
 };
 
+// src/chart.ts
+import Decimal from "decimal.js-light";
+import { toDecimal } from "./format";
+
+export interface LinePoint {
+  ts_utc: number;
+  balance: string;
+}
+
+export interface LineOpts {
+  width: number;
+  height: number;
+  padding: number;
+  stroke: string;
+  fill: string;
+}
+
+const DEFAULTS: LineOpts = {
+  width: 320,
+  height: 100,
+  padding: 8,
+  stroke: "#3b82f6",
+  fill: "rgba(59,130,246,0.10)",
+};
+
 export function renderLine(
   svg: SVGSVGElement,
   points: LinePoint[],
@@ -2546,7 +2571,7 @@ export function renderLine(
   const minD = decimals.reduce((a, b) => (b.lessThan(a) ? b : a));
   const maxD = decimals.reduce((a, b) => (b.greaterThan(a) ? b : a));
   const range = maxD.minus(minD);
-  const yRange = range.isZero() ? new (decimals[0].constructor as any)(1) : range;
+  const yRange = range.isZero() ? new Decimal(1) : range;
 
   const xStep = (o.width - 2 * o.padding) / Math.max(1, points.length - 1);
   const xAt = (i: number) => o.padding + i * xStep;
@@ -3115,8 +3140,11 @@ async function init() {
       render();
     }),
     await listen<{ mode: string }>("mode:changed", (e) => {
-      state = reduce(state, { type: "set_mode", mode: e.payload.mode as any });
-      render();
+      const m = e.payload.mode;
+      if (m === "compact" || m === "expanded" || m === "settings") {
+        state = reduce(state, { type: "set_mode", mode: m });
+        render();
+      }
     }),
     await listen<void>("balance:manual_refresh", async () => {
       state = reduce(state, { type: "refresh_started" });
