@@ -1,3 +1,4 @@
+pub mod commands;
 pub mod deepseek;
 pub mod error;
 pub mod state;
