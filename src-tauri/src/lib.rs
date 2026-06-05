@@ -1,3 +1,5 @@
+pub mod error;
+
 pub fn run() {
     tauri::Builder::default()
         .setup(|_app| Ok(()))
