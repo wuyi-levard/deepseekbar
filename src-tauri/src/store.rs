@@ -5,6 +5,7 @@ use rusqlite::types::Type;
 use rusqlite::{params, Connection, OptionalExtension};
 use rust_decimal::Decimal;
 use serde::Serialize;
+use std::sync::Mutex;
 
 const KEYRING_SERVICE: &str = "com.deepseekbar.app";
 const KEYRING_USER: &str = "api_key";
@@ -18,7 +19,7 @@ pub struct Snapshot {
 }
 
 pub struct Store {
-    conn: Connection,
+    conn: Mutex<Connection>,
 }
 
 impl Store {
@@ -41,11 +42,12 @@ impl Store {
             );
             "#,
         )?;
-        Ok(Store { conn })
+        Ok(Store { conn: Mutex::new(conn) })
     }
 
     pub fn write_snapshot(&self, snap: &Snapshot) -> Result<(), AppError> {
-        self.conn.execute(
+        let conn = self.conn.lock().expect("store mutex poisoned");
+        conn.execute(
             "INSERT INTO snapshots (ts_utc, balance, currency, is_stale) VALUES (?, ?, ?, ?)",
             params![
                 snap.ts_utc,
@@ -59,7 +61,8 @@ impl Store {
 
     pub fn history(&self, days: u32) -> Result<Vec<Snapshot>, AppError> {
         let cutoff = chrono_now_minus_days(days);
-        let mut stmt = self.conn.prepare(
+        let conn = self.conn.lock().expect("store mutex poisoned");
+        let mut stmt = conn.prepare(
             "SELECT ts_utc, balance, currency, is_stale FROM snapshots \
              WHERE ts_utc >= ? ORDER BY ts_utc ASC",
         )?;
@@ -82,14 +85,17 @@ impl Store {
     }
 
     pub fn cleanup_older_than(&self, cutoff_utc_ms: i64) -> Result<usize, AppError> {
-        let n = self
-            .conn
-            .execute("DELETE FROM snapshots WHERE ts_utc < ?", params![cutoff_utc_ms])?;
+        let conn = self.conn.lock().expect("store mutex poisoned");
+        let n = conn.execute(
+            "DELETE FROM snapshots WHERE ts_utc < ?",
+            params![cutoff_utc_ms],
+        )?;
         Ok(n)
     }
 
     pub fn set_state(&self, key: &str, value: &str) -> Result<(), AppError> {
-        self.conn.execute(
+        let conn = self.conn.lock().expect("store mutex poisoned");
+        conn.execute(
             "INSERT INTO app_state (key, value) VALUES (?, ?) \
              ON CONFLICT(key) DO UPDATE SET value = excluded.value",
             params![key, value],
@@ -98,8 +104,8 @@ impl Store {
     }
 
     pub fn get_state(&self, key: &str) -> Result<Option<String>, AppError> {
-        let v = self
-            .conn
+        let conn = self.conn.lock().expect("store mutex poisoned");
+        let v = conn
             .query_row(
                 "SELECT value FROM app_state WHERE key = ?",
                 params![key],
