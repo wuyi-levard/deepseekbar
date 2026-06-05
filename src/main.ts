@@ -181,7 +181,6 @@ async function init() {
   //    double-clickable even on the first launch.
   app.addEventListener("mousedown", async (e) => {
     if (state.mode !== "compact") return;
-    if (e.clientY > 6) return;
     if (e.button !== 0) return;
     try {
       await win.startDragging();

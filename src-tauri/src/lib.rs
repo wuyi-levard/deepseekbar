@@ -50,6 +50,15 @@ pub fn run() {
                 - 30 * 86_400_000;
             let _ = store.cleanup_older_than(cutoff);
 
+            // Backup database on startup to survive NSIS upgrades
+            let backup_path = db_path.with_extension("db.bak");
+            if db_path.exists() {
+                let _ = std::fs::copy(&db_path, &backup_path);
+            } else if backup_path.exists() {
+                let _ = std::fs::copy(&backup_path, &db_path);
+                tracing::info!("restored data from backup after upgrade");
+            }
+
             let state = AppState::new();
             let client = reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(10))
