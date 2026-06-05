@@ -1,4 +1,4 @@
-// src/state.ts
+﻿// src/state.ts
 import type { Balance, ErrorKind, Snapshot, UiMode } from "./types";
 
 export interface UiState {
@@ -11,6 +11,7 @@ export interface UiState {
   apiKeyConfigured: boolean;
   apiKey: string | null;
   pinned: boolean;
+  autostartEnabled?: boolean;
 }
 
 export const initialState: UiState = {
@@ -34,6 +35,7 @@ export type Action =
   | { type: "set_api_key_configured"; configured: boolean }
   | { type: "set_api_key"; key: string | null }
   | { type: "set_pinned"; pinned: boolean }
+  | { type: "set_autostart"; enabled: boolean }
   | { type: "load_history"; history: Snapshot[] };
 
 export function reduce(s: UiState, a: Action): UiState {
@@ -72,6 +74,8 @@ export function reduce(s: UiState, a: Action): UiState {
       return { ...s, apiKey: a.key };
     case "set_pinned":
       return { ...s, pinned: a.pinned };
+    case "set_autostart":
+      return { ...s, autostartEnabled: a.enabled };
     case "load_history":
       return { ...s, history: a.history };
   }

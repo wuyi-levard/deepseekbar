@@ -1,4 +1,4 @@
-// src-tauri/src/state.rs
+﻿// src-tauri/src/state.rs
 
 use crate::deepseek::Balance;
 use std::sync::Arc;
@@ -8,6 +8,7 @@ use tokio::sync::RwLock;
 pub struct Cache {
     pub last_balance: Option<Balance>,
     pub last_refresh_unix_ms: i64,
+    pub api_key: Option<String>,
 }
 
 #[derive(Clone)]
@@ -41,6 +42,15 @@ impl AppState {
     pub async fn last_refresh(&self) -> i64 {
         self.cache.read().await.last_refresh_unix_ms
     }
+    pub async fn set_api_key(&self, key: String) {
+        let mut g = self.cache.write().await;
+        g.api_key = Some(key);
+    }
+
+    pub async fn get_api_key(&self) -> Option<String> {
+        self.cache.read().await.api_key.clone()
+    }
+
 }
 
 #[cfg(test)]

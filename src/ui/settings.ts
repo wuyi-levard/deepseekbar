@@ -68,6 +68,11 @@ export function renderSettings(
   const status = root.querySelector<HTMLDivElement>('div[data-role="test-status"]')!;
   const close = root.querySelector<HTMLButtonElement>('button.close')!;
 
+  // Restore autostart state from saved config
+  if (s.autostartEnabled !== undefined) {
+    autostart.checked = s.autostartEnabled;
+  }
+
   testBtn.addEventListener("click", async () => {
     testBtn.disabled = true;
     status.textContent = "测试中…";

@@ -155,9 +155,15 @@ async function init() {
     await listen<{ mode: string }>("mode:changed", async (e) => {
       const m = e.payload.mode;
       if (m === "compact" || m === "expanded" || m === "settings") {
-        if (m === "settings" && state.apiKeyConfigured && !state.apiKey) {
-          const key = await invoke<string | null>("get_api_key");
-          if (key) state = reduce(state, { type: "set_api_key", key });
+        if (m === "settings") {
+          if (state.apiKeyConfigured && !state.apiKey) {
+            const key = await invoke<string | null>("get_api_key");
+            if (key) state = reduce(state, { type: "set_api_key", key });
+          }
+          try {
+            const a = await invoke<boolean>("get_autostart");
+            state = reduce(state, { type: "set_autostart", enabled: a });
+          } catch {}
         }
         state = reduce(state, { type: "set_mode", mode: m });
         render();
@@ -262,6 +268,10 @@ function showContextMenu(x: number, y: number) {
     else if (t === "toggle") {
       state = reduce(state, { type: "set_mode", mode: state.mode === "compact" ? "expanded" : "compact" });
     }     else if (t === "settings") {
+      try {
+        const a = await invoke<boolean>("get_autostart");
+        state = reduce(state, { type: "set_autostart", enabled: a });
+      } catch {}
       if (state.apiKeyConfigured && !state.apiKey) {
         const key = await invoke<string | null>("get_api_key");
         if (key) state = reduce(state, { type: "set_api_key", key });

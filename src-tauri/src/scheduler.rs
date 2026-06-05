@@ -31,7 +31,15 @@ impl Scheduler {
 
     pub async fn tick(&self) -> Result<(), AppError> {
         let _g = self.state.refresh_lock.lock().await;
-        let key = load_api_key_with_retry(5).await?;
+        let key = match self.state.get_api_key().await {
+            Some(k) => k,
+            None => {
+                let k = load_api_key_fallback()
+                    .ok_or_else(|| AppError::Keyring("No matching entry found".into()))?;
+                self.state.set_api_key(k.clone()).await;
+                k
+            }
+        };
         let balance = crate::deepseek::fetch_balance(&self.client, &key).await?;
         self.persist_and_cache(&balance).await?;
         Ok(())
@@ -42,6 +50,7 @@ impl Scheduler {
         self.persist_and_cache(&balance).await
     }
     pub async fn tick_with_key(&self, key: &str) -> Result<(), AppError> {
+        self.state.set_api_key(key.to_string()).await;
         let _g = self.state.refresh_lock.lock().await;
         let balance = crate::deepseek::fetch_balance(&self.client, key).await?;
         self.persist_and_cache(&balance).await?;
@@ -74,24 +83,9 @@ pub fn kind(e: &AppError) -> ErrorKind {
     classify_error(e)
 }
 
-/// Load the API key from keyring, retrying up to `max_retries` times on
-/// keyring errors (Windows Credential Manager can have transient read-after-
-/// write visibility delays).
-async fn load_api_key_with_retry(max_retries: u32) -> Result<String, AppError> {
-    let mut attempts = 0u32;
-    loop {
-        match crate::store::load_api_key() {
-            Ok(k) => return Ok(k),
-            Err(e) => {
-                if matches!(&e, AppError::Keyring(_)) && attempts < max_retries {
-                    attempts += 1;
-                    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-                    continue;
-                }
-                return Err(e);
-            }
-        }
-    }
+/// Fallback: try keyring with retries. Returns None if keyring is unavailable.
+fn load_api_key_fallback() -> Option<String> {
+    crate::store::load_api_key().ok()
 }
 
 #[cfg(test)]

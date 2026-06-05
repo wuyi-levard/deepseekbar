@@ -58,6 +58,12 @@ pub fn run() {
                 .expect("build client");
 
             let sched = Arc::new(Scheduler::new(state.clone(), store.clone(), client));
+
+            // Seed in-memory API key cache from keyring at startup
+            if let Ok(key) = store::load_api_key() {
+                tauri::async_runtime::block_on(state.set_api_key(key));
+            }
+
             let sched_for_loop = sched.clone();
             tauri::async_runtime::spawn(async move {
                 loop {
@@ -89,6 +95,7 @@ pub fn run() {
             commands::get_history,
             commands::get_window_state,
             commands::save_window_state,
+            commands::get_autostart,
             commands::set_autostart,
             commands::reset_data,
         ])

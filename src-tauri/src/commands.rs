@@ -137,6 +137,14 @@ pub fn save_window_state(
     Ok(())
 }
 
+
+#[tauri::command]
+pub fn get_autostart(app: AppHandle) -> Result<bool, AppError> {
+    use tauri_plugin_autostart::ManagerExt;
+    app.autolaunch()
+        .is_enabled()
+        .map_err(|e| AppError::Other(e.to_string()))
+}
 #[tauri::command]
 pub fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), AppError> {
     use tauri_plugin_autostart::ManagerExt;
