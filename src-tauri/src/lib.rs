@@ -50,8 +50,12 @@ pub fn run() {
                 - 30 * 86_400_000;
             let _ = store.cleanup_older_than(cutoff);
 
-            // Backup database on startup to survive NSIS upgrades
-            let backup_path = db_path.with_extension("db.bak");
+            // Backup database to LOCALAPPDATA to survive NSIS uninstall
+            let backup_dir = dirs::data_local_dir()
+                .unwrap_or_else(|| data_dir.clone())
+                .join("deepseekbar");
+            let _ = std::fs::create_dir_all(&backup_dir);
+            let backup_path = backup_dir.join("data.db");
             if db_path.exists() {
                 let _ = std::fs::copy(&db_path, &backup_path);
             } else if backup_path.exists() {

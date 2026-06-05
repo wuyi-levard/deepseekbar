@@ -201,10 +201,10 @@ async function init() {
       const pos = await win.outerPosition();
       dragSf = await win.scaleFactor();
       dragBase = { x: pos.x, y: pos.y };
-      dragSx = e.clientX;
-      dragSy = e.clientY;
-      dragCx = e.clientX;
-      dragCy = e.clientY;
+      dragSx = e.screenX;
+      dragSy = e.screenY;
+      dragCx = e.screenX;
+      dragCy = e.screenY;
       dragOn = true;
       dragRaf = requestAnimationFrame(dragLoop);
     } catch {}
@@ -212,8 +212,8 @@ async function init() {
 
   window.addEventListener("mousemove", (e) => {
     if (!dragOn) return;
-    dragCx = e.clientX;
-    dragCy = e.clientY;
+    dragCx = e.screenX;
+    dragCy = e.screenY;
   });
 
   window.addEventListener("mouseup", () => {
