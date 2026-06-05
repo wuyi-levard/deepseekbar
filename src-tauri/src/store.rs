@@ -1,4 +1,4 @@
-﻿// src-tauri/src/store.rs
+// src-tauri/src/store.rs
 
 use crate::error::AppError;
 use rusqlite::types::Type;
@@ -20,8 +20,8 @@ pub struct Snapshot {
 
 pub struct Store {
     conn: Mutex<Connection>,
+    path: std::path::PathBuf,
 }
-
 impl Store {
     pub fn open(path: &std::path::Path) -> Result<Self, AppError> {
         let conn = Connection::open(path)?;
@@ -42,7 +42,7 @@ impl Store {
             );
             "#,
         )?;
-        Ok(Store { conn: Mutex::new(conn) })
+        Ok(Store { conn: Mutex::new(conn), path: path.to_path_buf() })
     }
 
     pub fn write_snapshot(&self, snap: &Snapshot) -> Result<(), AppError> {
@@ -111,7 +111,12 @@ impl Store {
              ON CONFLICT(key) DO UPDATE SET value = excluded.value",
             params![key, value],
         )?;
+        self.backup();
         Ok(())
+    }
+
+    fn backup(&self) {
+        let _ = std::fs::copy(&self.path, backup_path_for(&self.path));
     }
 
     pub fn get_state(&self, key: &str) -> Result<Option<String>, AppError> {
@@ -127,6 +132,20 @@ impl Store {
     }
 }
 
+
+fn backup_path_for(db_path: &std::path::Path) -> std::path::PathBuf {
+    dirs::data_local_dir()
+        .unwrap_or_else(|| db_path.parent().unwrap_or(std::path::Path::new(".")).to_path_buf())
+        .join("deepseekbar")
+        .join("data.db")
+}
+
+/// Backup database to LOCALAPPDATA so data survives NSIS uninstall/reinstall
+pub fn backup_db(db_path: &std::path::Path) {
+    let backup_path = backup_path_for(db_path);
+    let _ = std::fs::create_dir_all(backup_path.parent().unwrap());
+    let _ = std::fs::copy(db_path, &backup_path);
+}
 fn chrono_now_minus_days(days: u32) -> i64 {
     use std::time::{SystemTime, UNIX_EPOCH};
     let now = SystemTime::now()
@@ -140,6 +159,17 @@ pub fn save_api_key(key: &str) -> Result<(), AppError> {
     let entry = keyring::Entry::new(KEYRING_SERVICE, KEYRING_USER)?;
     entry.set_password(key)?;
     Ok(())
+}
+
+/// SQLite-backed API key (survives keyring glitches)
+pub fn save_api_key_sqlite(store: &Store, key: &str) -> Result<(), AppError> {
+    store.set_state("api_key", key)
+}
+pub fn load_api_key_sqlite(store: &Store) -> Result<Option<String>, AppError> {
+    store.get_state("api_key")
+}
+pub fn delete_api_key_sqlite(store: &Store) -> Result<(), AppError> {
+    store.set_state("api_key", "")
 }
 
 pub fn load_api_key() -> Result<String, AppError> {

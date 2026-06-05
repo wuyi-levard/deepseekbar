@@ -1,4 +1,4 @@
-﻿// src-tauri/src/commands.rs
+// src-tauri/src/commands.rs
 
 use crate::deepseek::Balance;
 use crate::error::{classify_error, AppError, ErrorKind};
@@ -45,8 +45,12 @@ pub fn get_api_key() -> Result<Option<String>, AppError> {
 }
 
 #[tauri::command]
-pub fn save_api_key(key: String) -> Result<(), AppError> {
+pub fn save_api_key(
+    scheduler: State<'_, Arc<Scheduler>>,
+    key: String,
+) -> Result<(), AppError> {
     store::save_api_key(&key)?;
+    store::save_api_key_sqlite(&scheduler.store, &key)?;
     Ok(())
 }
 
@@ -60,7 +64,10 @@ pub async fn test_api_key(
 }
 
 #[tauri::command]
-pub fn delete_api_key() -> Result<(), AppError> {
+pub fn delete_api_key(
+    scheduler: State<'_, Arc<Scheduler>>,
+) -> Result<(), AppError> {
+    let _ = store::delete_api_key_sqlite(&scheduler.store);
     store::delete_api_key()
 }
 

@@ -1,4 +1,4 @@
-﻿pub mod commands;
+pub mod commands;
 pub mod deepseek;
 pub mod error;
 pub mod scheduler;
@@ -72,9 +72,12 @@ pub fn run() {
 
             let sched = Arc::new(Scheduler::new(state.clone(), store.clone(), client));
 
-            // Seed in-memory API key cache from keyring at startup
-            if let Ok(key) = store::load_api_key() {
-                tauri::async_runtime::block_on(state.set_api_key(key));
+            // Seed in-memory API key cache from keyring (or SQLite fallback) at startup
+            let seed_key = store::load_api_key()
+                .ok()
+                .or_else(|| store::load_api_key_sqlite(&store).ok().flatten());
+            if let Some(k) = seed_key {
+                tauri::async_runtime::block_on(state.set_api_key(k));
             }
 
             let sched_for_loop = sched.clone();

@@ -96,6 +96,7 @@ const settingsHandlers = (): SettingsHandlers => ({
   },
   onToggleAutostart: async (enabled) => {
     await invoke("set_autostart", { enabled });
+    state = reduce(state, { type: "set_autostart", enabled });
   },
   onTogglePinned: async (enabled) => {
     state = reduce(state, { type: "set_pinned", pinned: enabled });
@@ -179,48 +180,50 @@ async function init() {
   // 2. Register DOM input handlers (drag, dblclick, wheel, contextmenu).
   //    These must be in place for the compact bar to be draggable and
   //    double-clickable even on the first launch.
-    // --- Drag (manual, requestAnimationFrame loop) ---
-  let dragCx = 0, dragCy = 0, dragSx = 0, dragSy = 0;
-  let dragBase: { x: number; y: number } = { x: 0, y: 0 };
-  let dragSf = 1;
-  let dragOn = false;
-  let dragRaf = 0;
+    // --- Drag (synchronous capture + offset tracking) ---
+  let dragActive = false;
+  let dragOffsetX = 0;   // cursor screenX - window origin (in dips)
+  let dragOffsetY = 0;   // cursor screenY - window origin (in dips)
+  let dragScale = 1;
 
-  function dragLoop() {
-    if (!dragOn) return;
-    const dx = Math.round((dragCx - dragSx) * dragSf);
-    const dy = Math.round((dragCy - dragSy) * dragSf);
-    win.setPosition(new PhysicalPosition(dragBase.x + dx, dragBase.y + dy)).catch(() => {});
-    dragRaf = requestAnimationFrame(dragLoop);
+  function moveWindow(sx: number, sy: number) {
+    const px = Math.round((sx - dragOffsetX) * dragScale);
+    const py = Math.round((sy - dragOffsetY) * dragScale);
+    win.setPosition(new PhysicalPosition(px, py)).catch(() => {});
   }
 
-  app.addEventListener("mousedown", async (e) => {
+  app.addEventListener("mousedown", (e) => {
     if (state.mode !== "compact") return;
     if (e.button !== 0) return;
-    try {
-      const pos = await win.outerPosition();
-      dragSf = await win.scaleFactor();
-      dragBase = { x: pos.x, y: pos.y };
-      dragSx = e.screenX;
-      dragSy = e.screenY;
-      dragCx = e.screenX;
-      dragCy = e.screenY;
-      dragOn = true;
-      dragRaf = requestAnimationFrame(dragLoop);
-    } catch {}
+    if (dragActive) return;
+
+    // Capture synchronously — async event handlers recycle the event object
+    const startScreenX = e.screenX;
+    const startScreenY = e.screenY;
+
+    (async () => {
+      try {
+        const [pos, sf] = await Promise.all([win.outerPosition(), win.scaleFactor()]);
+        dragScale = sf;
+        dragOffsetX = startScreenX - pos.x / sf;
+        dragOffsetY = startScreenY - pos.y / sf;
+        dragActive = true;
+        moveWindow(startScreenX, startScreenY);
+      } catch {}
+    })();
+
+    e.preventDefault();
   });
 
   window.addEventListener("mousemove", (e) => {
-    if (!dragOn) return;
-    dragCx = e.screenX;
-    dragCy = e.screenY;
+    if (!dragActive) return;
+    moveWindow(e.screenX, e.screenY);
   });
 
   window.addEventListener("mouseup", () => {
-    if (!dragOn) return;
-    dragOn = false;
-    cancelAnimationFrame(dragRaf);
-    saveWindowState();
+    if (!dragActive) return;
+    dragActive = false;
+    setTimeout(() => saveWindowState(), 100);
   });
 
 

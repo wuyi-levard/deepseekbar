@@ -1,4 +1,4 @@
-﻿// src-tauri/src/scheduler.rs
+// src-tauri/src/scheduler.rs
 
 use crate::deepseek::Balance;
 use crate::error::{classify_error, AppError, ErrorKind};
@@ -34,7 +34,7 @@ impl Scheduler {
         let key = match self.state.get_api_key().await {
             Some(k) => k,
             None => {
-                let k = load_api_key_fallback()
+                let k = load_api_key_fallback(&self.store)
                     .ok_or_else(|| AppError::Keyring("No matching entry found".into()))?;
                 self.state.set_api_key(k.clone()).await;
                 k
@@ -84,8 +84,10 @@ pub fn kind(e: &AppError) -> ErrorKind {
 }
 
 /// Fallback: try keyring with retries. Returns None if keyring is unavailable.
-fn load_api_key_fallback() -> Option<String> {
-    crate::store::load_api_key().ok()
+fn load_api_key_fallback(store: &Store) -> Option<String> {
+    crate::store::load_api_key()
+        .ok()
+        .or_else(|| crate::store::load_api_key_sqlite(store).ok().flatten())
 }
 
 #[cfg(test)]
