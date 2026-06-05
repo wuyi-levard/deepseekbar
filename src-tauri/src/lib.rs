@@ -1,5 +1,6 @@
 pub mod deepseek;
 pub mod error;
+pub mod store;
 
 pub fn run() {
     tauri::Builder::default()
