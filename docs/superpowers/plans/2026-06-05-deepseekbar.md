@@ -2939,7 +2939,11 @@ git commit -m "feat(frontend): error kind descriptions"
 // src/main.ts
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import {
+  getCurrentWindow,
+  LogicalSize,
+  PhysicalPosition,
+} from "@tauri-apps/api/window";
 import { renderCompact } from "./ui/compact";
 import { renderExpanded } from "./ui/expanded";
 import { renderSettings, type SettingsHandlers } from "./ui/settings";
@@ -2970,9 +2974,9 @@ function render() {
 
 function applyWindowSize() {
   if (state.mode === "compact") {
-    void win.setSize(new (window as any).LogicalSize(220, 60));
+    void win.setSize(new LogicalSize(220, 60));
   } else {
-    void win.setSize(new (window as any).LogicalSize(360, 320));
+    void win.setSize(new LogicalSize(360, 320));
   }
 }
 
@@ -3068,7 +3072,7 @@ async function init() {
     state = reduce(state, { type: "set_pinned", pinned: ws.pinned });
     if (ws.position) {
       const sf = await win.scaleFactor();
-      await win.setPosition(new (window as any).PhysicalPosition(ws.position.x * sf, ws.position.y * sf));
+      await win.setPosition(new PhysicalPosition(ws.position.x * sf, ws.position.y * sf));
     }
   } catch {}
 
@@ -3136,7 +3140,7 @@ async function init() {
     try {
       const pos = await win.outerPosition();
       const sf = await win.scaleFactor();
-      await win.setPosition(new (window as any).PhysicalPosition(pos.x + dx * sf, pos.y + dy * sf));
+      await win.setPosition(new PhysicalPosition(pos.x + dx * sf, pos.y + dy * sf));
     } catch {}
   });
   window.addEventListener("mouseup", () => { dragOffset = null; });
