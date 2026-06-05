@@ -1,3 +1,5 @@
 target/
 gen/
 WixTools/
+check.log
+test.log
