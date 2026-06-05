@@ -174,3 +174,12 @@ pub fn emit_error(app: &AppHandle, _state: &AppState, err: AppError) {
         &serde_json::json!({ "kind": kind_str, "message": err.to_string() }),
     );
 }
+
+#[tauri::command]
+pub fn reset_data(
+    scheduler: State<'_, Arc<Scheduler>>,
+) -> Result<(), AppError> {
+    scheduler.store.cleanup_older_than(i64::MAX)?;
+    let _ = store::delete_api_key();
+    Ok(())
+}

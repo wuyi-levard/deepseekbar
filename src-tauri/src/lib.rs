@@ -1,14 +1,105 @@
 pub mod commands;
 pub mod deepseek;
 pub mod error;
-pub mod state;
 pub mod scheduler;
+pub mod state;
 pub mod store;
 pub mod tray;
 
+use crate::scheduler::Scheduler;
+use crate::state::AppState;
+use crate::store::Store;
+use std::sync::Arc;
+use tauri::Manager;
+use tauri_plugin_autostart::MacosLauncher;
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .setup(|_app| Ok(()))
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            None,
+        ))
+        .setup(|app| {
+            let log_dir = app
+                .path()
+                .app_log_dir()
+                .unwrap_or_else(|_| std::env::temp_dir());
+            let _ = std::fs::create_dir_all(&log_dir);
+            let file_appender = tracing_appender::rolling::daily(&log_dir, "deepseekbar.log");
+            let (nb, _guard) = tracing_appender::non_blocking(file_appender);
+            let subscriber = tracing_subscriber::fmt()
+                .with_writer(nb)
+                .with_env_filter(
+                    tracing_subscriber::EnvFilter::try_from_default_env()
+                        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn,deepseekbar=info")),
+                )
+                .with_ansi(false)
+                .finish();
+            let _ = tracing::subscriber::set_global_default(subscriber);
+
+            let data_dir = app.path().app_data_dir().expect("no data dir");
+            let _ = std::fs::create_dir_all(&data_dir);
+            let db_path = data_dir.join("data.db");
+
+            if let Ok(store) = Store::open(&db_path) {
+                let cutoff = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_millis() as i64)
+                    .unwrap_or(0)
+                    - 30 * 86_400_000;
+                let _ = store.cleanup_older_than(cutoff);
+            }
+
+            let store = Arc::new(Store::open(&db_path).expect("open store"));
+            let state = AppState::new();
+            let client = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(10))
+                .connect_timeout(std::time::Duration::from_secs(5))
+                .build()
+                .expect("build client");
+
+            let sched = Arc::new(Scheduler::new(state.clone(), store.clone(), client));
+            let sched_for_loop = sched.clone();
+            tauri::async_runtime::spawn(async move {
+                loop {
+                    if store::has_api_key() {
+                        if let Err(e) = sched_for_loop.tick().await {
+                            tracing::warn!(error = %e, "scheduled tick failed");
+                        }
+                    }
+                    tokio::time::sleep(sched_for_loop.interval).await;
+                }
+            });
+
+            app.manage(state);
+            app.manage(sched);
+
+            let handle = app.handle().clone();
+            tray::build(&handle).expect("build tray");
+
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::get_api_key_status,
+            commands::save_api_key,
+            commands::delete_api_key,
+            commands::get_current_balance,
+            commands::trigger_refresh,
+            commands::get_history,
+            commands::get_window_state,
+            commands::save_window_state,
+            commands::set_autostart,
+            commands::reset_data,
+        ])
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "main" {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
