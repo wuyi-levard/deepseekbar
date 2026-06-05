@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: rgba(20, 22, 28, 0.85);
   --fg: #e6e8ee;
   --muted: #8b93a7;
@@ -97,3 +97,33 @@ html, body {
 .ctx-menu button { display: block; width: 100%; text-align: left; padding: 6px 12px; background: transparent; border: none; color: var(--fg); cursor: pointer; font-size: 12px; font-family: inherit; }
 .ctx-menu button:hover { background: rgba(255,255,255,0.08); }
 .ctx-menu hr { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+
+.confirm-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+  z-index: 10;
+}
+.confirm-box {
+  background: rgba(30,32,38,0.95);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  max-width: 260px;
+}
+.confirm-box p { margin: 0 0 8px; font-size: 14px; }
+.confirm-box .hint { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+.confirm-btns { display: flex; gap: 8px; justify-content: center; }
+.confirm-btns button {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.confirm-btns button:hover { background: rgba(255,255,255,0.10); }
+.confirm-btns button.danger { color: var(--bad); border-color: rgba(239,68,68,0.4); }

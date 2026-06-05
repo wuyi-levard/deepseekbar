@@ -45,6 +45,16 @@ export function renderSettings(
       <div class="row actions">
         <button data-action="reset" class="danger">重置数据</button>
       </div>
+      <div class="confirm-overlay" style="display:none">
+        <div class="confirm-box">
+          <p>确定要重置所有数据吗？</p>
+          <p class="hint">这会删除 API key 和历史记录。</p>
+          <div class="confirm-btns">
+            <button class="confirm-cancel">取消</button>
+            <button class="confirm-ok danger">确认重置</button>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 
@@ -82,8 +92,19 @@ export function renderSettings(
 
   autostart.addEventListener("change", () => h.onToggleAutostart(autostart.checked));
   pinned.addEventListener("change", () => h.onTogglePinned(pinned.checked));
-  resetBtn.addEventListener("click", () => {
-    if (confirm("确定要重置所有数据吗？这会删除 API key 和历史。")) h.onReset();
+    function showConfirm() {
+    const overlay = root.querySelector<HTMLDivElement>(".confirm-overlay")!;
+    overlay.style.display = "flex";
+  }
+  function hideConfirm() {
+    const overlay = root.querySelector<HTMLDivElement>(".confirm-overlay")!;
+    overlay.style.display = "none";
+  }
+  resetBtn.addEventListener("click", showConfirm);
+  root.querySelector<HTMLButtonElement>(".confirm-cancel")!.addEventListener("click", hideConfirm);
+  root.querySelector<HTMLButtonElement>(".confirm-ok")!.addEventListener("click", () => {
+    hideConfirm();
+    h.onReset();
   });
   close.addEventListener("click", () => h.onClose());
 }
