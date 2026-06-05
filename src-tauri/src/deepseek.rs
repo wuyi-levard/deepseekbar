@@ -18,9 +18,9 @@ pub struct Balance {
 #[derive(Debug, Deserialize)]
 struct RawResponse {
     #[serde(default)]
-    balance_infos: Vec<RawBalanceInfo>,
+    is_available: bool,
     #[serde(default)]
-    available_balance: Option<String>,
+    balance_infos: Vec<RawBalanceInfo>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -42,9 +42,10 @@ pub fn parse_balance(body: &str) -> Result<Balance, AppError> {
         .into_iter()
         .next()
         .ok_or_else(|| AppError::Parse("balance_infos is empty".into()))?;
-    let available = raw
-        .available_balance
-        .ok_or_else(|| AppError::Parse("available_balance missing".into()))?;
+    // Per DeepSeek docs: total_balance is "总的可用余额，包括赠金和充值余额"
+    // (total available balance, including granted and topped-up). Map it to
+    // the user-facing "available" field.
+    let total_str = info.total_balance.clone();
     Ok(Balance {
         currency: info.currency,
         total: Decimal::from_str_exact(&info.total_balance)
@@ -53,8 +54,8 @@ pub fn parse_balance(body: &str) -> Result<Balance, AppError> {
             .map_err(|e| AppError::Parse(format!("granted_balance: {e}")))?,
         topped_up: Decimal::from_str_exact(&info.topped_up_balance)
             .map_err(|e| AppError::Parse(format!("topped_up_balance: {e}")))?,
-        available: Decimal::from_str_exact(&available)
-            .map_err(|e| AppError::Parse(format!("available_balance: {e}")))?,
+        available: Decimal::from_str_exact(&total_str)
+            .map_err(|e| AppError::Parse(format!("total_balance: {e}")))?,
     })
 }
 
@@ -93,13 +94,13 @@ mod tests {
     #[test]
     fn parse_valid_cny_body() {
         let body = json!({
+            "is_available": true,
             "balance_infos": [{
                 "currency": "CNY",
                 "total_balance": "12.34",
                 "granted_balance": "0.00",
                 "topped_up_balance": "12.34"
-            }],
-            "available_balance": "12.34"
+            }]
         })
         .to_string();
         let b = parse_balance(&body).unwrap();
@@ -112,13 +113,13 @@ mod tests {
     #[test]
     fn parse_high_precision_keeps_string_value() {
         let body = json!({
+            "is_available": true,
             "balance_infos": [{
                 "currency": "CNY",
                 "total_balance": "0.000123456789",
                 "granted_balance": "0",
                 "topped_up_balance": "0.000123456789"
-            }],
-            "available_balance": "0.000123456789"
+            }]
         })
         .to_string();
         let b = parse_balance(&body).unwrap();
@@ -126,35 +127,37 @@ mod tests {
     }
 
     #[test]
-    fn parse_missing_balance_infos_errors() {
-        let body = json!({ "available_balance": "1.00" }).to_string();
-        assert!(parse_balance(&body).is_err());
-    }
-
-    #[test]
-    fn parse_missing_available_balance_errors() {
+    fn parse_is_available_false_still_parses() {
         let body = json!({
+            "is_available": false,
             "balance_infos": [{
                 "currency": "CNY",
-                "total_balance": "1.00",
-                "granted_balance": "0",
-                "topped_up_balance": "1.00"
+                "total_balance": "0.00",
+                "granted_balance": "0.00",
+                "topped_up_balance": "0.00"
             }]
         })
         .to_string();
+        let b = parse_balance(&body).unwrap();
+        assert_eq!(b.available, Decimal::new(0, 2));
+    }
+
+    #[test]
+    fn parse_empty_balance_infos_errors() {
+        let body = json!({ "is_available": true, "balance_infos": [] }).to_string();
         assert!(parse_balance(&body).is_err());
     }
 
     #[test]
     fn parse_invalid_decimal_errors() {
         let body = json!({
+            "is_available": true,
             "balance_infos": [{
                 "currency": "CNY",
                 "total_balance": "abc",
                 "granted_balance": "0",
                 "topped_up_balance": "0"
-            }],
-            "available_balance": "0"
+            }]
         })
         .to_string();
         let err = parse_balance(&body).unwrap_err();
@@ -168,13 +171,13 @@ mod tests {
             .and(path("/user/balance"))
             .and(header("Authorization", "Bearer sk-ok"))
             .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "is_available": true,
                 "balance_infos": [{
                     "currency": "CNY",
                     "total_balance": "5.00",
                     "granted_balance": "5.00",
                     "topped_up_balance": "0.00"
-                }],
-                "available_balance": "5.00"
+                }]
             })))
             .mount(&server)
             .await;
