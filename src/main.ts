@@ -81,9 +81,11 @@ const settingsHandlers = (): SettingsHandlers => ({
     await invoke("save_api_key", { key });
     state = reduce(state, { type: "set_api_key_configured", configured: true });
     state = reduce(state, { type: "set_mode", mode: "compact" });
+    state = reduce(state, { type: "refresh_started" });
     historyLoaded = false;
-    await loadHistory();
     render();
+    await invoke("trigger_refresh");
+    await loadHistory();
   },
   onToggleAutostart: async (enabled) => {
     await invoke("set_autostart", { enabled });
