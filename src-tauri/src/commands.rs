@@ -76,12 +76,18 @@ pub fn trigger_refresh(
     app: AppHandle,
     state: State<'_, AppState>,
     scheduler: State<'_, Arc<Scheduler>>,
+    key: Option<String>,
 ) -> Result<(), AppError> {
     let sched = scheduler.inner().clone();
     let state_clone = state.inner().clone();
     let app_clone = app.clone();
     tauri::async_runtime::spawn(async move {
-        if let Err(e) = sched.tick().await {
+        let result = if let Some(k) = key {
+            sched.tick_with_key(&k).await
+        } else {
+            sched.tick().await
+        };
+        if let Err(e) = result {
             emit_error(&app_clone, &state_clone, e);
         } else {
             emit_updated(&app_clone, &state_clone).await;

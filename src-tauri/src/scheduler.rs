@@ -31,7 +31,7 @@ impl Scheduler {
 
     pub async fn tick(&self) -> Result<(), AppError> {
         let _g = self.state.refresh_lock.lock().await;
-        let key = load_api_key_with_retry(3).await?;
+        let key = load_api_key_with_retry(5).await?;
         let balance = crate::deepseek::fetch_balance(&self.client, &key).await?;
         self.persist_and_cache(&balance).await?;
         Ok(())
@@ -40,6 +40,12 @@ impl Scheduler {
     pub async fn tick_with(&self, balance: Balance) -> Result<(), AppError> {
         let _g = self.state.refresh_lock.lock().await;
         self.persist_and_cache(&balance).await
+    }
+    pub async fn tick_with_key(&self, key: &str) -> Result<(), AppError> {
+        let _g = self.state.refresh_lock.lock().await;
+        let balance = crate::deepseek::fetch_balance(&self.client, key).await?;
+        self.persist_and_cache(&balance).await?;
+        Ok(())
     }
 
     async fn persist_and_cache(&self, b: &Balance) -> Result<(), AppError> {
@@ -79,7 +85,7 @@ async fn load_api_key_with_retry(max_retries: u32) -> Result<String, AppError> {
             Err(e) => {
                 if matches!(&e, AppError::Keyring(_)) && attempts < max_retries {
                     attempts += 1;
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
                     continue;
                 }
                 return Err(e);

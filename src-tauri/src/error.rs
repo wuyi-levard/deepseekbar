@@ -34,7 +34,7 @@ pub enum ErrorKind {
 pub fn classify_error(e: &AppError) -> ErrorKind {
     match e {
         AppError::HttpStatus(401, _) | AppError::HttpStatus(403, _) => ErrorKind::Auth,
-        AppError::Keyring(_) => ErrorKind::Internal,
+        AppError::Keyring(_) => ErrorKind::Auth,
         AppError::HttpStatus(500..=599, _) => ErrorKind::Network,
         AppError::Timeout | AppError::Connect(_) => ErrorKind::Network,
         AppError::Parse(_) => ErrorKind::Parse,
@@ -127,9 +127,9 @@ mod tests {
     }
 
     #[test]
-    fn classify_keyring_as_internal() {
+    fn classify_keyring_as_auth() {
         let e = AppError::Keyring("not found".into());
-        assert_eq!(classify_error(&e), ErrorKind::Internal);
+        assert_eq!(classify_error(&e), ErrorKind::Auth);
     }
 
     #[test]

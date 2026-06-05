@@ -91,7 +91,7 @@ const settingsHandlers = (): SettingsHandlers => ({
     state = reduce(state, { type: "refresh_started" });
     historyLoaded = false;
     render();
-    await invoke("trigger_refresh");
+    await invoke("trigger_refresh", { key });
     await loadHistory();
   },
   onToggleAutostart: async (enabled) => {
