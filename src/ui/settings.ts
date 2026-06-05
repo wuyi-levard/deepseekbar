@@ -1,4 +1,5 @@
-import type { UiState } from "../state";
+﻿import type { UiState } from "../state";
+import { escapeText } from "../util";
 
 export interface SettingsHandlers {
   onTest(key: string): Promise<{ ok: boolean; preview?: string; error?: string }>;
@@ -87,6 +88,4 @@ export function renderSettings(
   close.addEventListener("click", () => h.onClose());
 }
 
-function escapeText(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
+

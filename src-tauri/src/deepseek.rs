@@ -1,6 +1,6 @@
-// src-tauri/src/deepseek.rs
+﻿// src-tauri/src/deepseek.rs
 
-use crate::error::{AppError, ErrorKind};
+use crate::error::AppError;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -18,6 +18,7 @@ pub struct Balance {
 #[derive(Debug, Deserialize)]
 struct RawResponse {
     #[serde(default)]
+    #[allow(dead_code)]
     is_available: bool,
     #[serde(default)]
     balance_infos: Vec<RawBalanceInfo>,
@@ -79,6 +80,7 @@ pub async fn fetch_balance(
 
 #[cfg(test)]
 mod tests {
+    use crate::error::ErrorKind;
     use super::*;
     use serde_json::json;
     use wiremock::matchers::{header, method, path};

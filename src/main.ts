@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+﻿import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   getCurrentWindow,
@@ -20,6 +20,15 @@ let state: UiState = initialState;
 let historyLoaded = false;
 const unlistens: UnlistenFn[] = [];
 
+let saveWindowScheduled = false;
+function scheduleWindowStateSave() {
+  if (saveWindowScheduled) return;
+  saveWindowScheduled = true;
+  setTimeout(() => {
+    saveWindowScheduled = false;
+    saveWindowState();
+  }, 500);
+}
 function render() {
   if (state.mode === "compact") renderCompact(app, state);
   else if (state.mode === "expanded") renderExpanded(app, state);
@@ -28,7 +37,7 @@ function render() {
   }
   applyWindowSize();
   applyPinned();
-  saveWindowState();
+  scheduleWindowStateSave();
 }
 
 function applyWindowSize() {
@@ -117,14 +126,15 @@ async function init() {
   //    first-launch setup (e.g. balance:updated after the user saves a key)
   //    are not lost.
   unlistens.push(
-    await listen<Balance>("balance:updated", (e) => {
+    await listen<{ balance: Balance; ts_utc: number }>("balance:updated", (e) => {
+      const { balance, ts_utc } = e.payload;
       state = reduce(state, {
         type: "balance_loaded",
-        balance: e.payload,
+        balance,
         snapshot: {
-          ts_utc: Date.now(),
-          balance: e.payload.available,
-          currency: e.payload.currency,
+          ts_utc,
+          balance: balance.available,
+          currency: balance.currency,
           is_stale: false,
         },
       });
@@ -241,8 +251,7 @@ function showContextMenu(x: number, y: number) {
     <button data-act="toggle">${state.mode === "compact" ? "展开" : "收起"}</button>
     <hr/>
     <button data-act="settings">设置…</button>
-    <hr/>
-    <button data-act="quit">退出</button>
+
   `;
   document.body.appendChild(m);
   const close = () => m.remove();
@@ -257,11 +266,6 @@ function showContextMenu(x: number, y: number) {
         if (key) state = reduce(state, { type: "set_api_key", key });
       }
       state = reduce(state, { type: "set_mode", mode: "settings" });
-    }
-    else if (t === "quit") {
-      // window.close() is intercepted by the Rust close handler (hide-only),
-      // so this won't actually exit. The tray's "退出" menu item is the real exit path.
-      window.close();
     }
     close();
     render();

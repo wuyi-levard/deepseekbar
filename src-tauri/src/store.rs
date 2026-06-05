@@ -1,4 +1,4 @@
-// src-tauri/src/store.rs
+﻿// src-tauri/src/store.rs
 
 use crate::error::AppError;
 use rusqlite::types::Type;
@@ -93,6 +93,17 @@ impl Store {
         Ok(n)
     }
 
+
+    /// Return the maximum snapshot ts_utc, or None when the table is empty.
+    pub fn max_snapshot_ts(&self) -> Result<Option<i64>, AppError> {
+        let conn = self.conn.lock().expect("store mutex poisoned");
+        let v = conn.query_row(
+            "SELECT MAX(ts_utc) FROM snapshots",
+            [],
+            |r| r.get::<_, Option<i64>>(0),
+        )?;
+        Ok(v)
+    }
     pub fn set_state(&self, key: &str, value: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().expect("store mutex poisoned");
         conn.execute(

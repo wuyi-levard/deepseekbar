@@ -1,4 +1,4 @@
-pub mod commands;
+﻿pub mod commands;
 pub mod deepseek;
 pub mod error;
 pub mod scheduler;
@@ -42,16 +42,14 @@ pub fn run() {
             let _ = std::fs::create_dir_all(&data_dir);
             let db_path = data_dir.join("data.db");
 
-            if let Ok(store) = Store::open(&db_path) {
-                let cutoff = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_millis() as i64)
-                    .unwrap_or(0)
-                    - 30 * 86_400_000;
-                let _ = store.cleanup_older_than(cutoff);
-            }
-
             let store = Arc::new(Store::open(&db_path).expect("open store"));
+            let cutoff = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as i64)
+                .unwrap_or(0)
+                - 30 * 86_400_000;
+            let _ = store.cleanup_older_than(cutoff);
+
             let state = AppState::new();
             let client = reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(10))

@@ -1,4 +1,4 @@
-// src-tauri/src/scheduler.rs
+﻿// src-tauri/src/scheduler.rs
 
 use crate::deepseek::Balance;
 use crate::error::{classify_error, AppError, ErrorKind};
@@ -48,13 +48,7 @@ impl Scheduler {
             .map(|d| d.as_millis() as i64)
             .unwrap_or(0);
 
-        let last_ts = self
-            .store
-            .history(30)?
-            .into_iter()
-            .map(|s| s.ts_utc)
-            .max()
-            .unwrap_or(0);
+        let last_ts = self.store.max_snapshot_ts()?.unwrap_or(0);
         if now < last_ts {
             tracing::warn!(now, last_ts, "skip snapshot: time regression");
         } else {
@@ -67,19 +61,6 @@ impl Scheduler {
         }
         self.state.set_balance(b.clone()).await;
         Ok(())
-    }
-
-    pub fn spawn(self) -> tokio::task::JoinHandle<()> {
-        tokio::spawn(async move {
-            loop {
-                if crate::store::has_api_key() {
-                    if let Err(e) = self.tick().await {
-                        tracing::warn!(error = %e, "scheduled tick failed");
-                    }
-                }
-                tokio::time::sleep(self.interval).await;
-            }
-        })
     }
 }
 

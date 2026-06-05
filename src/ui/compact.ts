@@ -1,4 +1,5 @@
-import { formatBalance, formatDelta } from "../format";
+﻿import { formatBalance, formatDelta } from "../format";
+import { escapeAttr, escapeText } from "../util";
 import type { UiState } from "../state";
 
 export function renderCompact(root: HTMLElement, s: UiState): void {
@@ -28,12 +29,4 @@ export function renderCompact(root: HTMLElement, s: UiState): void {
   `;
 }
 
-function escapeText(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-function escapeAttr(s: string): string {
-  return escapeText(s).replace(/"/g, "&quot;");
-}
+

@@ -1,6 +1,7 @@
-import { formatBalance, toDecimal } from "../format";
+﻿import { formatBalance, toDecimal } from "../format";
 import { renderLine } from "../chart";
 import type { UiState } from "../state";
+import { escapeText } from "../util";
 
 export function renderExpanded(root: HTMLElement, s: UiState): void {
   const amount = s.balance
@@ -59,9 +60,4 @@ function min(arr: { balance: string }[]): string {
     .toString();
 }
 
-function escapeText(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
+

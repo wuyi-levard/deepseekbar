@@ -1,4 +1,4 @@
-// src-tauri/src/commands.rs
+﻿// src-tauri/src/commands.rs
 
 use crate::deepseek::Balance;
 use crate::error::{classify_error, AppError, ErrorKind};
@@ -7,7 +7,7 @@ use crate::state::AppState;
 use crate::store::{self, Snapshot};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 
 #[derive(Serialize)]
 pub struct ApiKeyStatus {
@@ -145,18 +145,11 @@ pub fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), AppError> {
 
 pub async fn emit_updated(app: &AppHandle, state: &AppState) {
     if let Some(b) = state.get_balance().await {
-        let _ = app.emit("balance:updated", &b);
-        if let Some(snap) = state.get_balance().await {
-            let _ = app.emit("history:appended", &Snapshot {
-                ts_utc: std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_millis() as i64)
-                    .unwrap_or(0),
-                balance: snap.available,
-                currency: snap.currency.clone(),
-                is_stale: false,
-            });
-        }
+        let ts = state.last_refresh().await;
+        let _ = app.emit("balance:updated", &serde_json::json!({
+            "balance": &b,
+            "ts_utc": ts,
+        }));
     }
 }
 
