@@ -26,9 +26,7 @@ function render() {
   else if (state.mode === "settings") {
     renderSettings(app, state, settingsHandlers());
   }
-  if (state.mode === "compact" || state.mode === "expanded") {
-    applyWindowSize();
-  }
+  applyWindowSize();
   applyPinned();
   saveWindowState();
 }
