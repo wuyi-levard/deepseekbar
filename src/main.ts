@@ -5,6 +5,7 @@ import {
   LogicalSize,
   PhysicalPosition,
 } from "@tauri-apps/api/window";
+import "./styles.css";
 import { renderCompact } from "./ui/compact";
 import { renderExpanded } from "./ui/expanded";
 import { renderSettings, type SettingsHandlers } from "./ui/settings";
