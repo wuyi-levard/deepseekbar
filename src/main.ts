@@ -179,14 +179,50 @@ async function init() {
   // 2. Register DOM input handlers (drag, dblclick, wheel, contextmenu).
   //    These must be in place for the compact bar to be draggable and
   //    double-clickable even on the first launch.
+    // --- Drag (manual, requestAnimationFrame loop) ---
+  let dragCx = 0, dragCy = 0, dragSx = 0, dragSy = 0;
+  let dragBase: { x: number; y: number } = { x: 0, y: 0 };
+  let dragSf = 1;
+  let dragOn = false;
+  let dragRaf = 0;
+
+  function dragLoop() {
+    if (!dragOn) return;
+    const dx = Math.round((dragCx - dragSx) * dragSf);
+    const dy = Math.round((dragCy - dragSy) * dragSf);
+    win.setPosition(new PhysicalPosition(dragBase.x + dx, dragBase.y + dy)).catch(() => {});
+    dragRaf = requestAnimationFrame(dragLoop);
+  }
+
   app.addEventListener("mousedown", async (e) => {
     if (state.mode !== "compact") return;
     if (e.button !== 0) return;
     try {
-      await win.startDragging();
-      saveWindowState();
+      const pos = await win.outerPosition();
+      dragSf = await win.scaleFactor();
+      dragBase = { x: pos.x, y: pos.y };
+      dragSx = e.clientX;
+      dragSy = e.clientY;
+      dragCx = e.clientX;
+      dragCy = e.clientY;
+      dragOn = true;
+      dragRaf = requestAnimationFrame(dragLoop);
     } catch {}
   });
+
+  window.addEventListener("mousemove", (e) => {
+    if (!dragOn) return;
+    dragCx = e.clientX;
+    dragCy = e.clientY;
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (!dragOn) return;
+    dragOn = false;
+    cancelAnimationFrame(dragRaf);
+    saveWindowState();
+  });
+
 
   app.addEventListener("dblclick", (e) => {
     if (state.mode !== "compact") return;
