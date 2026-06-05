@@ -1,0 +1,20 @@
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Rust
+src-tauri/target/
+src-tauri/gen/
+
+# Tauri user data (when developing locally; never commit real keys)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
