@@ -61,6 +61,15 @@ pub fn save_api_key(
 }
 
 #[tauri::command]
+pub async fn test_api_key(
+    scheduler: State<'_, Arc<Scheduler>>,
+    key: String,
+) -> Result<String, AppError> {
+    let balance = crate::deepseek::fetch_balance(&scheduler.client, &key).await?;
+    Ok(balance.available.to_string())
+}
+
+#[tauri::command]
 pub fn delete_api_key() -> Result<(), AppError> {
     store::delete_api_key()
 }

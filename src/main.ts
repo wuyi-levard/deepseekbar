@@ -59,22 +59,19 @@ async function saveWindowState() {
 
 const settingsHandlers = (): SettingsHandlers => ({
   onTest: async (key) => {
+    if (!key.trim()) return { ok: false, error: "请先填写 API key" };
     try {
-      await invoke("save_api_key", { key });
-      const b = (await invoke("get_current_balance")) as Balance | null;
-      if (!b) {
-        await new Promise((r) => setTimeout(r, 1500));
-        const b2 = (await invoke("get_current_balance")) as Balance | null;
-        if (!b2) {
-          await invoke("delete_api_key");
-          return { ok: false, error: "未拿到余额，请检查 key" };
-        }
-        return { ok: true, preview: b2.available };
-      }
-      return { ok: true, preview: b.available };
+      const preview = await invoke<string>("test_api_key", { key });
+      return { ok: true, preview };
     } catch (e) {
-      try { await invoke("delete_api_key"); } catch {}
-      return { ok: false, error: String(e) };
+      const msg = String(e);
+      if (msg.includes("401") || msg.includes("403") || msg.toLowerCase().includes("unauthorized")) {
+        return { ok: false, error: "API key 无效或无权访问" };
+      }
+      if (msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("connect")) {
+        return { ok: false, error: "网络不通，请检查连接" };
+      }
+      return { ok: false, error: msg };
     }
   },
   onSave: async (key) => {
