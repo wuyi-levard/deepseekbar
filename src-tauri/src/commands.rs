@@ -45,23 +45,8 @@ pub fn get_api_key() -> Result<Option<String>, AppError> {
 }
 
 #[tauri::command]
-pub fn save_api_key(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    scheduler: State<'_, Arc<Scheduler>>,
-    key: String,
-) -> Result<(), AppError> {
+pub fn save_api_key(key: String) -> Result<(), AppError> {
     store::save_api_key(&key)?;
-    let sched = scheduler.inner().clone();
-    let state_clone = state.inner().clone();
-    let app_clone = app.clone();
-    tauri::async_runtime::spawn(async move {
-        if let Err(e) = sched.tick().await {
-            emit_error(&app_clone, &state_clone, e);
-        } else {
-            emit_updated(&app_clone, &state_clone).await;
-        }
-    });
     Ok(())
 }
 
