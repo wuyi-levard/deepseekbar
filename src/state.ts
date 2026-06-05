@@ -1,5 +1,5 @@
 // src/state.ts
-import type { Balance, ErrorKind, Snapshot, UiMode, WindowState } from "./types";
+import type { Balance, ErrorKind, Snapshot, UiMode } from "./types";
 
 export interface UiState {
   mode: UiMode;

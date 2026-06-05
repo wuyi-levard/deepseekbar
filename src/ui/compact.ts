@@ -9,7 +9,7 @@ export function renderCompact(root: HTMLElement, s: UiState): void {
 
   let display: string;
   if (s.error?.kind === "auth") display = "AUTH";
-  else if (s.error && s.error.kind !== "auth") display = "——";
+  else if (s.error) display = "——";
   else if (s.balance) display = `¥ ${formatBalance(s.balance.available)}`;
   else display = "——";
 
