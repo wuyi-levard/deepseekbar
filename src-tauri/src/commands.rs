@@ -40,6 +40,11 @@ pub fn get_api_key_status() -> ApiKeyStatus {
 }
 
 #[tauri::command]
+pub fn get_api_key() -> Result<Option<String>, AppError> {
+    Ok(store::load_api_key().ok())
+}
+
+#[tauri::command]
 pub fn save_api_key(
     app: AppHandle,
     state: State<'_, AppState>,

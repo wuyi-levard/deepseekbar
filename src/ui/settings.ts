@@ -48,6 +48,7 @@ export function renderSettings(
   `;
 
   const keyInput = root.querySelector<HTMLInputElement>('input[data-role="key"]')!;
+  if (s.apiKey) keyInput.value = s.apiKey;
   const testBtn = root.querySelector<HTMLButtonElement>('button[data-action="test"]')!;
   const saveBtn = root.querySelector<HTMLButtonElement>('button[data-action="save"]')!;
   const resetBtn = root.querySelector<HTMLButtonElement>('button[data-action="reset"]')!;

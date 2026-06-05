@@ -9,6 +9,7 @@ export interface UiState {
   error: { kind: ErrorKind; message: string } | null;
   refreshing: boolean;
   apiKeyConfigured: boolean;
+  apiKey: string | null;
   pinned: boolean;
 }
 
@@ -20,6 +21,7 @@ export const initialState: UiState = {
   error: null,
   refreshing: false,
   apiKeyConfigured: false,
+  apiKey: null,
   pinned: true,
 };
 
@@ -30,6 +32,7 @@ export type Action =
   | { type: "refresh_started" }
   | { type: "refresh_finished" }
   | { type: "set_api_key_configured"; configured: boolean }
+  | { type: "set_api_key"; key: string | null }
   | { type: "set_pinned"; pinned: boolean }
   | { type: "load_history"; history: Snapshot[] };
 
@@ -65,6 +68,8 @@ export function reduce(s: UiState, a: Action): UiState {
     case "set_api_key_configured":
       if (a.configured) return { ...s, apiKeyConfigured: true };
       return { ...s, apiKeyConfigured: false, mode: "settings", balance: null, history: [] };
+    case "set_api_key":
+      return { ...s, apiKey: a.key };
     case "set_pinned":
       return { ...s, pinned: a.pinned };
     case "load_history":

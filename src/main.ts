@@ -77,6 +77,7 @@ const settingsHandlers = (): SettingsHandlers => ({
   onSave: async (key) => {
     await invoke("save_api_key", { key });
     state = reduce(state, { type: "set_api_key_configured", configured: true });
+    state = reduce(state, { type: "set_api_key", key });
     state = reduce(state, { type: "set_mode", mode: "compact" });
     state = reduce(state, { type: "refresh_started" });
     historyLoaded = false;
@@ -130,16 +131,24 @@ async function init() {
       render();
     }),
     await listen<BalanceError>("balance:error", (e) => {
+      const raw = e.payload.message ?? "";
+      const friendly = raw.includes("No matching entry found")
+        ? "密钥未存储，请在设置中重新保存 API key"
+        : raw;
       state = reduce(state, {
         type: "balance_error",
         kind: e.payload.kind,
-        message: describeKind(e.payload.kind) + (e.payload.message ? `（${e.payload.message}）` : ""),
+        message: describeKind(e.payload.kind) + (friendly ? `（${friendly}）` : ""),
       });
       render();
     }),
-    await listen<{ mode: string }>("mode:changed", (e) => {
+    await listen<{ mode: string }>("mode:changed", async (e) => {
       const m = e.payload.mode;
       if (m === "compact" || m === "expanded" || m === "settings") {
+        if (m === "settings" && state.apiKeyConfigured && !state.apiKey) {
+          const key = await invoke<string | null>("get_api_key");
+          if (key) state = reduce(state, { type: "set_api_key", key });
+        }
         state = reduce(state, { type: "set_mode", mode: m });
         render();
       }
@@ -206,6 +215,10 @@ async function init() {
   // 4. Decide initial mode based on whether a key is configured.
   const status = (await invoke("get_api_key_status")) as { configured: boolean };
   state = reduce(state, { type: "set_api_key_configured", configured: status.configured });
+  if (status.configured) {
+    const key = await invoke<string | null>("get_api_key");
+    if (key) state = reduce(state, { type: "set_api_key", key });
+  }
   if (!status.configured) {
     state = reduce(state, { type: "set_mode", mode: "settings" });
     render();
@@ -238,7 +251,13 @@ function showContextMenu(x: number, y: number) {
     if (t === "refresh") await invoke("trigger_refresh");
     else if (t === "toggle") {
       state = reduce(state, { type: "set_mode", mode: state.mode === "compact" ? "expanded" : "compact" });
-    } else if (t === "settings") state = reduce(state, { type: "set_mode", mode: "settings" });
+    }     else if (t === "settings") {
+      if (state.apiKeyConfigured && !state.apiKey) {
+        const key = await invoke<string | null>("get_api_key");
+        if (key) state = reduce(state, { type: "set_api_key", key });
+      }
+      state = reduce(state, { type: "set_mode", mode: "settings" });
+    }
     else if (t === "quit") {
       // window.close() is intercepted by the Rust close handler (hide-only),
       // so this won't actually exit. The tray's "退出" menu item is the real exit path.
