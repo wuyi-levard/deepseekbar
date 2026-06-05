@@ -112,28 +112,9 @@ async function loadHistory() {
 }
 
 async function init() {
-  try {
-    const ws = (await invoke("get_window_state")) as WindowState;
-    state = reduce(state, { type: "set_mode", mode: ws.mode });
-    state = reduce(state, { type: "set_pinned", pinned: ws.pinned });
-    if (ws.position) {
-      const sf = await win.scaleFactor();
-      await win.setPosition(new PhysicalPosition(ws.position.x * sf, ws.position.y * sf));
-    }
-  } catch {}
-
-  const status = (await invoke("get_api_key_status")) as { configured: boolean };
-  state = reduce(state, { type: "set_api_key_configured", configured: status.configured });
-  if (!status.configured) {
-    state = reduce(state, { type: "set_mode", mode: "settings" });
-    render();
-    return;
-  }
-
-  await loadHistory();
-  await invoke("trigger_refresh");
-  render();
-
+  // 1. Register Tauri event listeners FIRST so events fired during the
+  //    first-launch setup (e.g. balance:updated after the user saves a key)
+  //    are not lost.
   unlistens.push(
     await listen<Balance>("balance:updated", (e) => {
       state = reduce(state, {
@@ -170,6 +151,9 @@ async function init() {
     }),
   );
 
+  // 2. Register DOM input handlers (drag, dblclick, wheel, contextmenu).
+  //    These must be in place for the compact bar to be draggable and
+  //    double-clickable even on the first launch.
   let dragOffset: { x: number; y: number } | null = null;
   app.addEventListener("mousedown", (e) => {
     if (state.mode !== "compact") return;
@@ -207,6 +191,31 @@ async function init() {
     e.preventDefault();
     showContextMenu(e.clientX, e.clientY);
   });
+
+  // 3. Restore window state.
+  try {
+    const ws = (await invoke("get_window_state")) as WindowState;
+    state = reduce(state, { type: "set_mode", mode: ws.mode });
+    state = reduce(state, { type: "set_pinned", pinned: ws.pinned });
+    if (ws.position) {
+      const sf = await win.scaleFactor();
+      await win.setPosition(new PhysicalPosition(ws.position.x * sf, ws.position.y * sf));
+    }
+  } catch {}
+
+  // 4. Decide initial mode based on whether a key is configured.
+  const status = (await invoke("get_api_key_status")) as { configured: boolean };
+  state = reduce(state, { type: "set_api_key_configured", configured: status.configured });
+  if (!status.configured) {
+    state = reduce(state, { type: "set_mode", mode: "settings" });
+    render();
+    return;
+  }
+
+  // 5. Has key: load history, trigger first refresh.
+  await loadHistory();
+  await invoke("trigger_refresh");
+  render();
 }
 
 function showContextMenu(x: number, y: number) {
