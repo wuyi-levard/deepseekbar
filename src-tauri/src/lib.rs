@@ -4,6 +4,7 @@ pub mod error;
 pub mod state;
 pub mod scheduler;
 pub mod store;
+pub mod tray;
 
 pub fn run() {
     tauri::Builder::default()
