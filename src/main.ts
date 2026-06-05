@@ -179,25 +179,15 @@ async function init() {
   // 2. Register DOM input handlers (drag, dblclick, wheel, contextmenu).
   //    These must be in place for the compact bar to be draggable and
   //    double-clickable even on the first launch.
-  let dragState: { startX: number; startY: number; startPos: { x: number; y: number }; sf: number } | null = null;
   app.addEventListener("mousedown", async (e) => {
     if (state.mode !== "compact") return;
     if (e.clientY > 6) return;
+    if (e.button !== 0) return;
     try {
-      const pos = await win.outerPosition();
-      const sf = await win.scaleFactor();
-      dragState = { startX: e.clientX, startY: e.clientY, startPos: pos, sf };
+      await win.startDragging();
+      saveWindowState();
     } catch {}
   });
-  window.addEventListener("mousemove", async (e) => {
-    if (!dragState) return;
-    const dx = (e.clientX - dragState.startX) * dragState.sf;
-    const dy = (e.clientY - dragState.startY) * dragState.sf;
-    try {
-      await win.setPosition(new PhysicalPosition(dragState.startPos.x + dx, dragState.startPos.y + dy));
-    } catch {}
-  });
-  window.addEventListener("mouseup", () => { dragState = null; });
 
   app.addEventListener("dblclick", (e) => {
     if (state.mode !== "compact") return;
