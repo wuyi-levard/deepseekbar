@@ -37,8 +37,8 @@ async function centerWindow() {
     const mon = await currentMonitor();
     if (!mon) return;
     const sf = mon.scaleFactor;
-    const cx = Math.round((mon.position.x + mon.size.width / 2) / sf - 180);
-    const cy = Math.round((mon.position.y + mon.size.height / 2) / sf - 160);
+    const cx = Math.round((mon.position.x + mon.size.width / 2) / sf - 190);
+    const cy = Math.round((mon.position.y + mon.size.height / 2) / sf - 220);
     await win.setPosition(new PhysicalPosition(cx, cy));
   } catch {}
 }

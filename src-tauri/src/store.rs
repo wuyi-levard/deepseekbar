@@ -7,6 +7,23 @@ use rust_decimal::Decimal;
 use serde::Serialize;
 use std::sync::Mutex;
 
+fn obfuscate_key(key: &str) -> String {
+    use base64::Engine;
+    format!("b64:{}", base64::engine::general_purpose::STANDARD.encode(key.as_bytes()))
+}
+fn deobfuscate_key(s: &str) -> Option<String> {
+    use base64::Engine;
+    if let Some(b64) = s.strip_prefix("b64:") {
+        base64::engine::general_purpose::STANDARD
+            .decode(b64.as_bytes())
+            .ok()
+            .and_then(|v| String::from_utf8(v).ok())
+    } else {
+        // Backward-compat: old plaintext keys (no prefix)
+        Some(s.to_string())
+    }
+}
+
 const KEYRING_SERVICE: &str = "com.deepseekbar.app";
 const KEYRING_USER: &str = "api_key";
 
@@ -177,10 +194,11 @@ pub fn save_api_key(key: &str) -> Result<(), AppError> {
 
 /// SQLite-backed API key (survives keyring glitches)
 pub fn save_api_key_sqlite(store: &Store, key: &str) -> Result<(), AppError> {
-    store.set_state("api_key", key)
+    let encoded = obfuscate_key(key);
+    store.set_state("api_key", &encoded)
 }
 pub fn load_api_key_sqlite(store: &Store) -> Result<Option<String>, AppError> {
-    store.get_state("api_key")
+    store.get_state("api_key").map(|opt| opt.and_then(|s| deobfuscate_key(&s)))
 }
 pub fn delete_api_key_sqlite(store: &Store) -> Result<(), AppError> {
     store.set_state("api_key", "")
