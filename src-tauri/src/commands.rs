@@ -173,8 +173,8 @@ pub fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), AppError> {
 #[tauri::command]
 pub fn get_refresh_interval(
     scheduler: State<'_, Arc<Scheduler>>,
-) -> Result<u64, AppError> {
-    Ok(store::get_interval(&scheduler.store))
+) -> u64 {
+    store::get_interval(&scheduler.store)
 }
 
 #[tauri::command]
