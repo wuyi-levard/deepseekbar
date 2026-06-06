@@ -6,6 +6,7 @@ import {
   PhysicalPosition,
   currentMonitor,
 } from "@tauri-apps/api/window";
+import { register } from "@tauri-apps/plugin-global-shortcut";
 import "./styles.css";
 import { renderCompact } from "./ui/compact";
 import { renderExpanded } from "./ui/expanded";
@@ -41,8 +42,8 @@ async function centerWindow() {
     const mon = await currentMonitor();
     if (!mon) return;
     const sf = mon.scaleFactor;
-    const cx = Math.round((mon.position.x + mon.size.width / 2) / sf - 190);
-    const cy = Math.round((mon.position.y + mon.size.height / 2) / sf - 220);
+    const cx = Math.round((mon.position.x + mon.size.width / 2) / sf - 200);
+    const cy = Math.round((mon.position.y + mon.size.height / 2) / sf - 260);
     await win.setPosition(new PhysicalPosition(cx, cy));
   } catch {}
 }
@@ -180,7 +181,33 @@ async function loadHistory() {
   historyLoaded = true;
 }
 
+async function exportCSV() {
+  try {
+    const h = await invoke("get_history", { days: 365 }) as Snapshot[];
+    if (!h.length) return;
+    let csv = "时间,余额(元),货币\n";
+    for (const r of h) {
+      csv += new Date(r.ts_utc).toISOString() + "," + r.balance + "," + r.currency + "\n";
+    }
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "deepseekbar_" + new Date().toISOString().slice(0,10) + ".csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch {}
+}
+
 async function init() {
+  // 0. Register global hotkey Ctrl+Shift+D to toggle window
+  try {
+    await register("Ctrl+Shift+D", async () => {
+      const vis = await win.isVisible();
+      if (vis) { await win.hide(); } else { await win.show(); await win.setFocus(); }
+    });
+  } catch {}
+
   // 1. Register Tauri event listeners FIRST so events fired during the
   //    first-launch setup (e.g. balance:updated after the user saves a key)
   //    are not lost.
@@ -336,6 +363,42 @@ async function init() {
     showContextMenu(e.clientX, e.clientY);
   });
 
+  // Delegated click handler for expanded view buttons
+  app.addEventListener("click", async (e) => {
+    const target = e.target as HTMLElement;
+    const btn = target.closest<HTMLElement>("[data-action], .close");
+    if (!btn) return;
+    e.stopPropagation();
+    const action = btn.dataset.action || (btn.classList.contains("close") ? "close" : null);
+    if (!action) return;
+    if (action === "refresh") {
+      state = reduce(state, { type: "refresh_started" });
+      render();
+      await invoke("trigger_refresh");
+    } else if (action === "settings") {
+      const a = await invoke<boolean>("get_autostart");
+      state = reduce(state, { type: "set_autostart", enabled: a });
+      const interval = await invoke<number>("get_refresh_interval");
+      state = reduce(state, { type: "set_refresh_interval", secs: interval });
+      const thresh = await invoke<string | null>("get_alert_threshold");
+      if (thresh) state = reduce(state, { type: "set_alert_threshold", threshold: thresh });
+      const pm = await invoke<boolean>("get_privacy_mode");
+      state = reduce(state, { type: "set_privacy_mode", enabled: pm });
+      const theme = await invoke<string>("get_theme");
+      state = reduce(state, { type: "set_theme", theme });
+      applyTheme(theme);
+      if (state.apiKeyConfigured && !state.apiKey) {
+        const key = await invoke<string | null>("get_api_key");
+        if (key) state = reduce(state, { type: "set_api_key", key });
+      }
+      state = reduce(state, { type: "set_mode", mode: "settings" });
+      render();
+    } else if (action === "close") {
+      state = reduce(state, { type: "set_mode", mode: "compact" });
+      render();
+    }
+  });
+
   // 3. Restore window state.
   try {
     const ws = (await invoke("get_window_state")) as WindowState;
@@ -382,6 +445,8 @@ function showContextMenu(x: number, y: number) {
     <button data-act="toggle">${state.mode === "compact" ? "展开" : "收起"}</button>
     <hr/>
     <button data-act="settings">设置…</button>
+    <hr/>
+    <button data-act="export">导出 CSV</button>
 
   `;
   document.body.appendChild(m);
@@ -391,6 +456,10 @@ function showContextMenu(x: number, y: number) {
     if (t === "refresh") await invoke("trigger_refresh");
     else if (t === "toggle") {
       state = reduce(state, { type: "set_mode", mode: state.mode === "compact" ? "expanded" : "compact" });
+    }     else if (t === "export") {
+      exportCSV();
+      close();
+      return;
     }     else if (t === "settings") {
       try {
         const a = await invoke<boolean>("get_autostart");

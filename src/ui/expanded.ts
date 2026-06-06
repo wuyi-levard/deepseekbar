@@ -31,6 +31,7 @@ export function renderExpanded(root: HTMLElement, s: UiState): void {
       <div class="row actions">
         <button data-action="refresh">立即刷新</button>
         <button data-action="settings">设置</button>
+        <button data-action="export">导出</button>
       </div>
     </div>
   `;
