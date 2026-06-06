@@ -5,33 +5,33 @@ import { escapeText } from "../util";
 
 export function renderExpanded(root: HTMLElement, s: UiState): void {
   const amount = s.balance
-    ? `£¤ ${formatBalance(s.balance.available)}`
-    : s.error?.kind === "auth" ? "AUTH" : "¡ª¡ª";
+    ? `Â¥ ${formatBalance(s.balance.available)}`
+    : s.error?.kind === "auth" ? "AUTH" : "â€”â€”";
 
   const hasHistory = s.history.length > 0;
-  const next = s.balance && !s.error ? "¡ñ ÒÑÍ¬²½" : `¡ñ ×´Ì¬£º${s.error?.message ?? "Î´Öª"}`;
+  const next = s.balance && !s.error ? "â— å·²åŒæ­¥" : `â— çŠ¶æ€ï¼š${s.error?.message ?? "æœªçŸ¥"}`;
   const empty = !hasHistory;
 
   root.innerHTML = `
     <div class="expanded">
       <div class="row top">
-        <span class="label">Óà¶î</span>
+        <span class="label">ä½™é¢</span>
         <span class="amount">${amount}</span>
-        <button class="close" aria-label="¹Ø±Õ">?</button>
+        <button class="close" aria-label="å…³é—­">âœ•</button>
       </div>
       <hr/>
       <div class="chart-wrap">
-        ${empty ? `<div class="empty">ÔİÎŞÇ÷ÊÆÊı¾İ£¬ÏÂ´ÎË¢ĞÂºó½«¿ªÊ¼¼ÇÂ¼</div>` : `<svg class="chart" data-role="chart"></svg>`}
+        ${empty ? `<div class="empty">æš‚æ— è¶‹åŠ¿æ•°æ®ï¼Œä¸‹æ¬¡åˆ·æ–°åå°†å¼€å§‹è®°å½•</div>` : `<svg class="chart" data-role="chart"></svg>`}
         ${hasHistory ? `<div class="row stats">
-          <span>¸ß ${formatBalance(max(s.history))}</span>
-          <span>µÍ ${formatBalance(min(s.history))}</span>
+          <span>é«˜ ${formatBalance(max(s.history))}</span>
+          <span>ä½ ${formatBalance(min(s.history))}</span>
         </div>` : ""}
       </div>
       <div class="row status">${escapeText(next)}</div>
       <div class="row actions">
-        <button data-action="refresh">Á¢¼´Ë¢ĞÂ</button>
-        <button data-action="settings">ÉèÖÃ</button>
-        <button data-action="export">µ¼³ö</button>
+        <button data-action="refresh">ç«‹å³åˆ·æ–°</button>
+        <button data-action="settings">è®¾ç½®</button>
+        <button data-action="export">å¯¼å‡º</button>
       </div>
     </div>
   `;
