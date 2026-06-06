@@ -17,7 +17,7 @@ npm run tauri dev
 npm run tauri build
 ```
 
-产物：`src-tauri/target/release/bundle/nsis/DeepSeekBar_0.1.0_x64-setup.exe`
+产物：`src-tauri/target/release/bundle/nsis/DeepSeekBar_0.1.1_x64-setup.exe`
 
 ## 手工 QA 清单
 
