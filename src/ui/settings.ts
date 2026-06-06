@@ -1,4 +1,4 @@
-﻿import type { UiState } from "../state";
+import type { UiState } from "../state";
 import { escapeText } from "../util";
 
 export interface SettingsHandlers {
@@ -7,6 +7,7 @@ export interface SettingsHandlers {
   onToggleAutostart(enabled: boolean): Promise<void>;
   onTogglePinned(enabled: boolean): Promise<void>;
   onReset(): Promise<void>;
+  onIntervalChange(secs: number): Promise<void>;
   onClose(): void;
 }
 
@@ -96,6 +97,11 @@ export function renderSettings(
   });
 
   autostart.addEventListener("change", () => h.onToggleAutostart(autostart.checked));
+  const intervalSelect = root.querySelector<HTMLSelectElement>('select[data-role="interval"]')!;
+  if (s.refreshInterval !== undefined) {
+    intervalSelect.value = String(s.refreshInterval);
+  }
+  intervalSelect.addEventListener("change", () => h.onIntervalChange(Number(intervalSelect.value)));
   pinned.addEventListener("change", () => h.onTogglePinned(pinned.checked));
     function showConfirm() {
     const overlay = root.querySelector<HTMLDivElement>(".confirm-overlay")!;

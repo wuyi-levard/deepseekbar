@@ -35,8 +35,10 @@ pub struct Position {
 }
 
 #[tauri::command]
-pub fn get_api_key_status() -> ApiKeyStatus {
-    ApiKeyStatus { configured: store::has_api_key() }
+pub fn get_api_key_status(
+    scheduler: State<'_, Arc<Scheduler>>,
+) -> ApiKeyStatus {
+    ApiKeyStatus { configured: store::has_api_key_any(&scheduler.store) }
 }
 
 #[tauri::command]
@@ -161,6 +163,23 @@ pub fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), AppError> {
     } else {
         mgr.disable().map_err(|e| AppError::Other(e.to_string()))?;
     }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_refresh_interval(
+    scheduler: State<'_, Arc<Scheduler>>,
+) -> u64 {
+    store::get_interval(&scheduler.store)
+}
+
+#[tauri::command]
+pub fn set_refresh_interval(
+    scheduler: State<'_, Arc<Scheduler>>,
+    secs: u64,
+) -> Result<(), AppError> {
+    store::set_interval(&scheduler.store, secs)?;
+    // set_interval already calls backup() through set_state
     Ok(())
 }
 

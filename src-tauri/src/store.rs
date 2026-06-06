@@ -146,6 +146,20 @@ pub fn backup_db(db_path: &std::path::Path) {
     let _ = std::fs::create_dir_all(backup_path.parent().unwrap());
     let _ = std::fs::copy(db_path, &backup_path);
 }
+pub const DEFAULT_INTERVAL_SECS: u64 = 300;
+
+pub fn get_interval(store: &Store) -> u64 {
+    store.get_state("refresh_interval_secs")
+        .ok()
+        .flatten()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(DEFAULT_INTERVAL_SECS)
+}
+
+pub fn set_interval(store: &Store, secs: u64) -> Result<(), AppError> {
+    store.set_state("refresh_interval_secs", &secs.to_string())
+}
+
 fn chrono_now_minus_days(days: u32) -> i64 {
     use std::time::{SystemTime, UNIX_EPOCH};
     let now = SystemTime::now()
@@ -189,6 +203,10 @@ pub fn delete_api_key() -> Result<(), AppError> {
 
 pub fn has_api_key() -> bool {
     load_api_key().is_ok()
+}
+
+pub fn has_api_key_any(store: &Store) -> bool {
+    load_api_key().is_ok() || load_api_key_sqlite(store).ok().flatten().is_some()
 }
 
 #[cfg(test)]

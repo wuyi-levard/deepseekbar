@@ -4,6 +4,7 @@ import {
   getCurrentWindow,
   LogicalSize,
   PhysicalPosition,
+  currentMonitor,
 } from "@tauri-apps/api/window";
 import "./styles.css";
 import { renderCompact } from "./ui/compact";
@@ -18,6 +19,7 @@ const app = document.getElementById("app")!;
 
 let state: UiState = initialState;
 let historyLoaded = false;
+let preSettingsPos: { x: number; y: number } | null = null;
 const unlistens: UnlistenFn[] = [];
 
 let saveWindowScheduled = false;
@@ -29,7 +31,36 @@ function scheduleWindowStateSave() {
     saveWindowState();
   }, 500);
 }
+
+async function centerWindow() {
+  try {
+    const mon = await currentMonitor();
+    if (!mon) return;
+    const sf = mon.scaleFactor;
+    const cx = Math.round((mon.position.x + mon.size.width / 2) / sf - 180);
+    const cy = Math.round((mon.position.y + mon.size.height / 2) / sf - 160);
+    await win.setPosition(new PhysicalPosition(cx, cy));
+  } catch {}
+}
+
+let lastMode = state.mode;
 function render() {
+  // Center window when entering settings
+  if (state.mode === "settings" && lastMode !== "settings") {
+    (async () => {
+      preSettingsPos = await win.outerPosition().then(p => ({ x: p.x, y: p.y })).catch(() => null);
+      await centerWindow();
+    })();
+  }
+  // Restore position when leaving settings
+  if (lastMode === "settings" && state.mode !== "settings" && preSettingsPos) {
+    (async () => {
+      try { await win.setPosition(new PhysicalPosition(preSettingsPos.x, preSettingsPos.y)); } catch {}
+      preSettingsPos = null;
+    })();
+  }
+  lastMode = state.mode;
+
   if (state.mode === "compact") renderCompact(app, state);
   else if (state.mode === "expanded") renderExpanded(app, state);
   else if (state.mode === "settings") {
@@ -109,7 +140,15 @@ const settingsHandlers = (): SettingsHandlers => ({
     } catch {}
     location.reload();
   },
-  onClose: () => {
+  onIntervalChange: async (secs: number) => {
+    await invoke("set_refresh_interval", { secs });
+    state = reduce(state, { type: "set_refresh_interval", secs });
+  },
+  onClose: async () => {
+    if (preSettingsPos) {
+      try { await win.setPosition(new PhysicalPosition(preSettingsPos.x, preSettingsPos.y)); } catch {}
+      preSettingsPos = null;
+    }
     state = reduce(state, { type: "set_mode", mode: "compact" });
     render();
   },
@@ -299,11 +338,15 @@ function showContextMenu(x: number, y: number) {
       try {
         const a = await invoke<boolean>("get_autostart");
         state = reduce(state, { type: "set_autostart", enabled: a });
+        const interval = await invoke<number>("get_refresh_interval");
+        state = reduce(state, { type: "set_refresh_interval", secs: interval });
       } catch {}
       if (state.apiKeyConfigured && !state.apiKey) {
         const key = await invoke<string | null>("get_api_key");
         if (key) state = reduce(state, { type: "set_api_key", key });
       }
+      const interval = await invoke<number>("get_refresh_interval");
+      state = reduce(state, { type: "set_refresh_interval", secs: interval });
       state = reduce(state, { type: "set_mode", mode: "settings" });
     }
     close();

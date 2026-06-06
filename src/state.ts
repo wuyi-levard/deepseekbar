@@ -1,7 +1,8 @@
-﻿// src/state.ts
+// src/state.ts
 import type { Balance, ErrorKind, Snapshot, UiMode } from "./types";
 
 export interface UiState {
+  refreshInterval?: number;
   mode: UiMode;
   balance: Balance | null;
   prevAvailable: string | null;
@@ -36,7 +37,8 @@ export type Action =
   | { type: "set_api_key"; key: string | null }
   | { type: "set_pinned"; pinned: boolean }
   | { type: "set_autostart"; enabled: boolean }
-  | { type: "load_history"; history: Snapshot[] };
+  | { type: "load_history"; history: Snapshot[] }
+  | { type: "set_refresh_interval"; secs: number };
 
 export function reduce(s: UiState, a: Action): UiState {
   switch (a.type) {
@@ -78,5 +80,7 @@ export function reduce(s: UiState, a: Action): UiState {
       return { ...s, autostartEnabled: a.enabled };
     case "load_history":
       return { ...s, history: a.history };
+    case "set_refresh_interval":
+      return { ...s, refreshInterval: a.secs };
   }
 }

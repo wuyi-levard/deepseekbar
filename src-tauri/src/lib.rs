@@ -70,7 +70,8 @@ pub fn run() {
                 .build()
                 .expect("build client");
 
-            let sched = Arc::new(Scheduler::new(state.clone(), store.clone(), client));
+            let interval_secs = store::get_interval(&store);
+            let sched = Arc::new(Scheduler::new(state.clone(), store.clone(), client, interval_secs));
 
             // Seed in-memory API key cache from keyring (or SQLite fallback) at startup
             let seed_key = store::load_api_key()
@@ -81,14 +82,16 @@ pub fn run() {
             }
 
             let sched_for_loop = sched.clone();
+            let store_for_loop = store.clone();
             tauri::async_runtime::spawn(async move {
                 loop {
-                    if store::has_api_key() {
+                    if store::has_api_key_any(&store_for_loop) {
                         if let Err(e) = sched_for_loop.tick().await {
                             tracing::warn!(error = %e, "scheduled tick failed");
                         }
                     }
-                    tokio::time::sleep(sched_for_loop.interval).await;
+                    let interval = store::get_interval(&store_for_loop);
+                    tokio::time::sleep(std::time::Duration::from_secs(interval)).await;
                 }
             });
 
@@ -114,6 +117,8 @@ pub fn run() {
             commands::get_autostart,
             commands::set_autostart,
             commands::reset_data,
+            commands::get_refresh_interval,
+            commands::set_refresh_interval,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

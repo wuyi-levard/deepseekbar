@@ -20,12 +20,13 @@ impl Scheduler {
         state: AppState,
         store: Arc<Store>,
         client: reqwest::Client,
+        interval_secs: u64,
     ) -> Self {
         Scheduler {
             state,
             store,
             client,
-            interval: std::time::Duration::from_secs(DEFAULT_INTERVAL_SECS),
+            interval: std::time::Duration::from_secs(interval_secs),
         }
     }
 
@@ -49,7 +50,7 @@ impl Scheduler {
         let _g = self.state.refresh_lock.lock().await;
         self.persist_and_cache(&balance).await
     }
-    pub async fn tick_with_key(&self, key: &str) -> Result<(), AppError> {
+pub async fn tick_with_key(&self, key: &str) -> Result<(), AppError> {
         self.state.set_api_key(key.to_string()).await;
         let _g = self.state.refresh_lock.lock().await;
         let balance = crate::deepseek::fetch_balance(&self.client, key).await?;
@@ -111,7 +112,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let store = Arc::new(Store::open(&dir.path().join("d.db")).unwrap());
         let s = AppState::new();
-        let sched = Scheduler::new(s.clone(), store.clone(), reqwest::Client::new());
+        let sched = Scheduler::new(s.clone(), store.clone(), reqwest::Client::new(), 300);
         sched.tick_with(b()).await.unwrap();
         assert_eq!(store.history(30).unwrap().len(), 1);
     }
@@ -129,7 +130,7 @@ mod tests {
             })
             .unwrap();
         let s = AppState::new();
-        let sched = Scheduler::new(s.clone(), store.clone(), reqwest::Client::new());
+        let sched = Scheduler::new(s.clone(), store.clone(), reqwest::Client::new(), 300);
         sched.tick_with(b()).await.unwrap();
         let h = store.history(30).unwrap();
         assert_eq!(h.len(), 1);
