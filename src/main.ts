@@ -1,4 +1,4 @@
-ï»¿import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   getCurrentWindow,
@@ -80,9 +80,9 @@ function applyWindowSize() {
   if (state.mode === "compact") {
     void win.setSize(new LogicalSize(180, 56));
   } else if (state.mode === "settings") {
-    void win.setSize(new LogicalSize(400, 560));
+    void win.setSize(new LogicalSize(420, 620));
   } else {
-    void win.setSize(new LogicalSize(380, 440));
+    void win.setSize(new LogicalSize(380, 500));
   }
 }
 
@@ -106,17 +106,17 @@ async function saveWindowState() {
 
 const settingsHandlers = (): SettingsHandlers => ({
   onTest: async (key) => {
-    if (!key.trim()) return { ok: false, error: "è¯·å…ˆå¡«å†™ API key" };
+    if (!key.trim()) return { ok: false, error: "ÇëÏÈÌîĞ´ API key" };
     try {
       const preview = await invoke<string>("test_api_key", { key });
       return { ok: true, preview };
     } catch (e) {
       const msg = String(e);
       if (msg.includes("401") || msg.includes("403") || msg.toLowerCase().includes("unauthorized")) {
-        return { ok: false, error: "API key æ— æ•ˆæˆ–æ— æƒè®¿é—®" };
+        return { ok: false, error: "API key ÎŞĞ§»òÎŞÈ¨·ÃÎÊ" };
       }
       if (msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("connect")) {
-        return { ok: false, error: "ç½‘ç»œä¸é€šï¼Œè¯·æ£€æŸ¥è¿æ¥" };
+        return { ok: false, error: "ÍøÂç²»Í¨£¬Çë¼ì²éÁ¬½Ó" };
       }
       return { ok: false, error: msg };
     }
@@ -187,7 +187,7 @@ async function exportCSV() {
   try {
     const h = await invoke("get_history", { days: 365 }) as Snapshot[];
     if (!h.length) return;
-    let csv = "æ—¶é—´,ä½™é¢(å…ƒ),è´§å¸\n";
+    let csv = "Ê±¼ä,Óà¶î(Ôª),»õ±Ò\n";
     for (const r of h) {
       csv += new Date(r.ts_utc).toISOString() + "," + r.balance + "," + r.currency + "\n";
     }
@@ -221,7 +221,7 @@ async function init() {
       render();
     }),
     await listen<{ message: string }>("balance:alert", (e) => {
-      new Notification("DeepSeekBar ä½™é¢é¢„è­¦", { body: e.payload.message });
+      new Notification("DeepSeekBar Óà¶îÔ¤¾¯", { body: e.payload.message });
     }),
     await listen<{ mode: string }>("mode:changed", async (e) => {
       if (e.payload.mode === "settings") {
@@ -255,12 +255,12 @@ async function init() {
     await listen<BalanceError>("balance:error", (e) => {
       const raw = e.payload.message ?? "";
       const friendly = raw.includes("No matching entry found")
-        ? "å¯†é’¥æœªå­˜å‚¨ï¼Œè¯·åœ¨è®¾ç½®ä¸­é‡æ–°ä¿å­˜ API key"
+        ? "ÃÜÔ¿Î´´æ´¢£¬ÇëÔÚÉèÖÃÖĞÖØĞÂ±£´æ API key"
         : raw;
       state = reduce(state, {
         type: "balance_error",
         kind: e.payload.kind,
-        message: describeKind(e.payload.kind) + (friendly ? `ï¼ˆ${friendly}ï¼‰` : ""),
+        message: describeKind(e.payload.kind) + (friendly ? `£¨${friendly}£©` : ""),
       });
       render();
     }),
@@ -292,37 +292,40 @@ async function init() {
   //    These must be in place for the compact bar to be draggable and
   //    double-clickable even on the first launch.
     // --- Drag (synchronous capture + offset tracking) ---
+  
+    // --- Drag: cached position eliminates async race on mousedown ---
   let dragActive = false;
-  let dragOffsetX = 0;   // cursor screenX - window origin (in dips)
-  let dragOffsetY = 0;   // cursor screenY - window origin (in dips)
+  let dragPhysX = 0;  // cached window physical X
+  let dragPhysY = 0;  // cached window physical Y
   let dragScale = 1;
+  let dragOffX = 0;   // screen*scale - physical (computed on mousedown)
+  let dragOffY = 0;
+
+  async function cacheDragPos() {
+    try {
+      const [pos, sf] = await Promise.all([win.outerPosition(), win.scaleFactor()]);
+      dragScale = sf;
+      dragPhysX = pos.x;
+      dragPhysY = pos.y;
+    } catch {}
+  }
 
   function moveWindow(sx: number, sy: number) {
-    const px = Math.round((sx - dragOffsetX) * dragScale);
-    const py = Math.round((sy - dragOffsetY) * dragScale);
+    const px = Math.round(sx * dragScale - dragOffX);
+    const py = Math.round(sy * dragScale - dragOffY);
     win.setPosition(new PhysicalPosition(px, py)).catch(() => {});
   }
 
+  cacheDragPos(); // prime cache at startup
+
   app.addEventListener("mousedown", (e) => {
-    if (state.mode !== "compact") return;
+    if (state.mode !== "compact" && state.mode !== "expanded") return;
     if (e.button !== 0) return;
     if (dragActive) return;
 
-    // Capture synchronously â€” async event handlers recycle the event object
-    const startScreenX = e.screenX;
-    const startScreenY = e.screenY;
-
-    (async () => {
-      try {
-        const [pos, sf] = await Promise.all([win.outerPosition(), win.scaleFactor()]);
-        dragScale = sf;
-        dragOffsetX = startScreenX - pos.x / sf;
-        dragOffsetY = startScreenY - pos.y / sf;
-        dragActive = true;
-        moveWindow(startScreenX, startScreenY);
-      } catch {}
-    })();
-
+    dragActive = true;
+    dragOffX = e.screenX * dragScale - dragPhysX;
+    dragOffY = e.screenY * dragScale - dragPhysY;
     e.preventDefault();
   });
 
@@ -334,8 +337,9 @@ async function init() {
   window.addEventListener("mouseup", () => {
     if (!dragActive) return;
     dragActive = false;
-    setTimeout(() => saveWindowState(), 100);
+    cacheDragPos().then(() => saveWindowState());
   });
+
 
 
   app.addEventListener("dblclick", (e) => {
@@ -446,12 +450,12 @@ function showContextMenu(x: number, y: number) {
   m.style.left = `${x}px`;
   m.style.top = `${y}px`;
   m.innerHTML = `
-    <button data-act="refresh">ç«‹å³åˆ·æ–°</button>
-    <button data-act="toggle">${state.mode === "compact" ? "å±•å¼€" : "æ”¶èµ·"}</button>
+    <button data-act="refresh">Á¢¼´Ë¢ĞÂ</button>
+    <button data-act="toggle">${state.mode === "compact" ? "Õ¹¿ª" : "ÊÕÆğ"}</button>
     <hr/>
-    <button data-act="settings">è®¾ç½®â€¦</button>
+    <button data-act="settings">ÉèÖÃ¡­</button>
     <hr/>
-    <button data-act="export">å¯¼å‡º CSV</button>
+    <button data-act="export">µ¼³ö CSV</button>
 
   `;
   document.body.appendChild(m);
