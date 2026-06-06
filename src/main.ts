@@ -77,18 +77,25 @@ function render() {
   scheduleWindowStateSave();
 }
 
-function applyWindowSize() {
-  if (state.mode === "compact") {
-    void win.setSize(new LogicalSize(180, 56));
-  } else if (state.mode === "settings") {
-    void win.setSize(new LogicalSize(420, 620));
-  } else {
-    void win.setSize(new LogicalSize(380, 500));
+async function applyWindowSize() {
+  // Let the browser paint the new DOM before resizing the native window,
+  // so Tauri can measure the correct content size.
+  await new Promise((r) => requestAnimationFrame(r));
+  try {
+    if (state.mode === "compact") {
+      await win.setSize(new LogicalSize(180, 60));
+    } else if (state.mode === "settings") {
+      await win.setSize(new LogicalSize(420, 620));
+    } else {
+      await win.setSize(new LogicalSize(380, 500));
+    }
+  } catch (e) {
+    console.warn("applyWindowSize failed:", e);
   }
 }
 
 function applyPinned() {
-  void win.setAlwaysOnTop(state.pinned);
+  win.setAlwaysOnTop(state.pinned).catch((e: unknown) => console.warn("setAlwaysOnTop failed:", e));
 }
 
 async function saveWindowState() {
