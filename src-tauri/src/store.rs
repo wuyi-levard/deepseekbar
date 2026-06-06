@@ -133,7 +133,16 @@ impl Store {
     }
 
     fn backup(&self) {
-        let _ = std::fs::copy(&self.path, backup_path_for(&self.path));
+        let backup_path = backup_path_for(&self.path);
+        if let Some(parent) = backup_path.parent() {
+            if let Err(e) = std::fs::create_dir_all(parent) {
+                tracing::warn!(path = %parent.display(), error = %e, "backup: failed to create directory");
+                return;
+            }
+        }
+        if let Err(e) = std::fs::copy(&self.path, &backup_path) {
+            tracing::warn!(src = %self.path.display(), dst = %backup_path.display(), error = %e, "backup: copy failed");
+        }
     }
 
     pub fn get_state(&self, key: &str) -> Result<Option<String>, AppError> {

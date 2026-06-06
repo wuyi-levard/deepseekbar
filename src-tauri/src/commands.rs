@@ -51,8 +51,12 @@ pub fn save_api_key(
     scheduler: State<'_, Arc<Scheduler>>,
     key: String,
 ) -> Result<(), AppError> {
-    store::save_api_key(&key)?;
+    // Write SQLite first: if keyring fails later, the SQLite fallback
+    // ensures the key is still retrievable on next load.
     store::save_api_key_sqlite(&scheduler.store, &key)?;
+    if let Err(e) = store::save_api_key(&key) {
+        tracing::warn!(error = %e, "keyring write failed, key saved to SQLite fallback only");
+    }
     Ok(())
 }
 
@@ -169,8 +173,8 @@ pub fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), AppError> {
 #[tauri::command]
 pub fn get_refresh_interval(
     scheduler: State<'_, Arc<Scheduler>>,
-) -> u64 {
-    store::get_interval(&scheduler.store)
+) -> Result<u64, AppError> {
+    Ok(store::get_interval(&scheduler.store))
 }
 
 #[tauri::command]

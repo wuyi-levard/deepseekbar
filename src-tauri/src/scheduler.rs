@@ -5,7 +5,7 @@ use crate::error::{classify_error, AppError, ErrorKind};
 use crate::state::AppState;
 use tauri::Emitter;
 use crate::store::{Snapshot, Store};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub const DEFAULT_INTERVAL_SECS: u64 = 300;
 
@@ -15,6 +15,9 @@ pub struct Scheduler {
     pub client: reqwest::Client,
     pub interval: std::time::Duration,
     pub app_handle: Option<tauri::AppHandle>,
+    /// Timestamp (unix ms) of the last balance alert, used to throttle
+    /// notifications so the user isn't spammed every refresh cycle.
+    last_alert_ms: Mutex<i64>,
 }
 
 impl Scheduler {
@@ -30,6 +33,7 @@ impl Scheduler {
             client,
             interval: std::time::Duration::from_secs(interval_secs),
             app_handle: None,
+            last_alert_ms: Mutex::new(0),
         }
     }
 
@@ -37,6 +41,9 @@ impl Scheduler {
         self.app_handle = Some(handle);
     }
 
+    /// Execute a refresh cycle. Uses `tokio::sync::Mutex` (not `std::sync::Mutex`)
+    /// because the guard is held across `.await` points (the HTTP fetch). This
+    /// serializes all refresh attempts so only one API call is in-flight at a time.
     pub async fn tick(&self) -> Result<(), AppError> {
         let _g = self.state.refresh_lock.lock().await;
         let key = match self.state.get_api_key().await {
@@ -54,12 +61,24 @@ impl Scheduler {
         Ok(())
     }
 
-        fn check_balance_alert(&self, balance: &Balance) {
+    fn check_balance_alert(&self, balance: &Balance) {
         let threshold = match crate::store::get_alert_threshold(&self.store) {
             Some(t) => t,
             None => return,
         };
         if balance.available < threshold {
+            // Throttle: only emit an alert once every 4 hours
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as i64)
+                .unwrap_or(0);
+            {
+                let mut last = self.last_alert_ms.lock().unwrap();
+                if now - *last < 4 * 3600 * 1000 {
+                    return;
+                }
+                *last = now;
+            }
             tracing::info!(
                 available = %balance.available,
                 threshold = %threshold,

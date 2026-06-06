@@ -34,12 +34,16 @@ pub enum ErrorKind {
 pub fn classify_error(e: &AppError) -> ErrorKind {
     match e {
         AppError::HttpStatus(401, _) | AppError::HttpStatus(403, _) => ErrorKind::Auth,
+        // Keyring errors are classified as Auth because the most common case
+        // is a missing/expired credential entry, which the frontend translates
+        // to a "re-enter your API key" prompt.
         AppError::Keyring(_) => ErrorKind::Auth,
+        AppError::HttpStatus(429, _) => ErrorKind::Network, // rate limit
         AppError::HttpStatus(500..=599, _) => ErrorKind::Network,
         AppError::Timeout | AppError::Connect(_) => ErrorKind::Network,
         AppError::Parse(_) => ErrorKind::Parse,
         AppError::Sqlite(_) | AppError::Serde(_) | AppError::Other(_) => ErrorKind::Internal,
-        // 2xx non-200 and 4xx other than 401/403 fall to internal until we know better
+        // 2xx non-200, 4xx other than 401/403/429 fall to internal
         AppError::HttpStatus(_, _) => ErrorKind::Internal,
     }
 }

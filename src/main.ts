@@ -21,6 +21,7 @@ const app = document.getElementById("app")!;
 let state: UiState = initialState;
 let historyLoaded = false;
 let preSettingsPos: { x: number; y: number } | null = null;
+let privacyTogglePending = false;
 const unlistens: UnlistenFn[] = [];
 
 let saveWindowScheduled = false;
@@ -99,8 +100,8 @@ async function saveWindowState() {
     await invoke("save_window_state", {
       state: { position: { x, y }, mode: state.mode, pinned: state.pinned },
     });
-  } catch {
-    // ignore persistence errors
+  } catch (e) {
+    console.warn("save_window_state failed:", e);
   }
 }
 
@@ -224,18 +225,20 @@ async function init() {
       new Notification("DeepSeekBar 余额预警", { body: e.payload.message });
     }),
     await listen<{ mode: string }>("mode:changed", async (e) => {
-      if (e.payload.mode === "settings") {
+      const m = e.payload.mode;
+      if (m === "toggle_privacy") {
+        if (privacyTogglePending) return;
+        privacyTogglePending = true;
+        const pm = !state.privacyMode;
+        await invoke("set_privacy_mode", { enabled: pm });
+        state = reduce(state, { type: "set_privacy_mode", enabled: pm });
+        render();
+        setTimeout(() => { privacyTogglePending = false; }, 300);
+      } else if (m === "settings") {
         const a = await invoke<boolean>("get_autostart");
         state = reduce(state, { type: "set_autostart", enabled: a });
         const interval = await invoke<number>("get_refresh_interval");
         state = reduce(state, { type: "set_refresh_interval", secs: interval });
-        const alertThresh = await invoke<string | null>("get_alert_threshold");
-        if (alertThresh) state = reduce(state, { type: "set_alert_threshold", threshold: alertThresh });
-        const pm2 = await invoke<boolean>("get_privacy_mode");
-        state = reduce(state, { type: "set_privacy_mode", enabled: pm2 });
-        const theme2 = await invoke<string>("get_theme");
-        state = reduce(state, { type: "set_theme", theme: theme2 });
-        applyTheme(theme2);
         const thresh = await invoke<string | null>("get_alert_threshold");
         if (thresh) state = reduce(state, { type: "set_alert_threshold", threshold: thresh });
         const pm = await invoke<boolean>("get_privacy_mode");
@@ -243,12 +246,14 @@ async function init() {
         const theme = await invoke<string>("get_theme");
         state = reduce(state, { type: "set_theme", theme });
         applyTheme(theme);
+        if (state.apiKeyConfigured && !state.apiKey) {
+          const key = await invoke<string | null>("get_api_key");
+          if (key) state = reduce(state, { type: "set_api_key", key });
+        }
         state = reduce(state, { type: "set_mode", mode: "settings" });
         render();
-      } else if (e.payload.mode === "toggle_privacy") {
-        const pm = !state.privacyMode;
-        await invoke("set_privacy_mode", { enabled: pm });
-        state = reduce(state, { type: "set_privacy_mode", enabled: pm });
+      } else if (m === "compact" || m === "expanded") {
+        state = reduce(state, { type: "set_mode", mode: m });
         render();
       }
     }),
@@ -263,23 +268,6 @@ async function init() {
         message: describeKind(e.payload.kind) + (friendly ? `（${friendly}）` : ""),
       });
       render();
-    }),
-    await listen<{ mode: string }>("mode:changed", async (e) => {
-      const m = e.payload.mode;
-      if (m === "compact" || m === "expanded" || m === "settings") {
-        if (m === "settings") {
-          if (state.apiKeyConfigured && !state.apiKey) {
-            const key = await invoke<string | null>("get_api_key");
-            if (key) state = reduce(state, { type: "set_api_key", key });
-          }
-          try {
-            const a = await invoke<boolean>("get_autostart");
-            state = reduce(state, { type: "set_autostart", enabled: a });
-          } catch {}
-        }
-        state = reduce(state, { type: "set_mode", mode: m });
-        render();
-      }
     }),
     await listen<void>("balance:manual_refresh", async () => {
       state = reduce(state, { type: "refresh_started" });
@@ -441,6 +429,8 @@ app.addEventListener("dblclick", (e) => {
 }
 
 function showContextMenu(x: number, y: number) {
+  // Remove any stale context menus before creating a new one
+  document.querySelectorAll(".ctx-menu").forEach((el) => el.remove());
   const m = document.createElement("div");
   m.className = "ctx-menu";
   m.style.left = `${x}px`;
@@ -452,10 +442,16 @@ function showContextMenu(x: number, y: number) {
     <button data-act="settings">设置…</button>
     <hr/>
     <button data-act="export">导出 CSV</button>
-
   `;
   document.body.appendChild(m);
-  const close = () => m.remove();
+  const close = () => {
+    m.remove();
+    document.removeEventListener("keydown", onEscape);
+  };
+  const onEscape = (ev: KeyboardEvent) => {
+    if (ev.key === "Escape") close();
+  };
+  document.addEventListener("keydown", onEscape);
   m.addEventListener("click", async (ev) => {
     const t = (ev.target as HTMLElement).dataset.act;
     if (t === "refresh") await invoke("trigger_refresh");
@@ -476,8 +472,6 @@ function showContextMenu(x: number, y: number) {
         const key = await invoke<string | null>("get_api_key");
         if (key) state = reduce(state, { type: "set_api_key", key });
       }
-      const interval = await invoke<number>("get_refresh_interval");
-      state = reduce(state, { type: "set_refresh_interval", secs: interval });
       state = reduce(state, { type: "set_mode", mode: "settings" });
     }
     close();

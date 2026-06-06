@@ -32,7 +32,9 @@ export function renderLine(
   svg.setAttribute("viewBox", `0 0 ${o.width} ${o.height}`);
   svg.setAttribute("width", String(o.width));
   svg.setAttribute("height", String(o.height));
-  svg.innerHTML = "";
+  while (svg.firstChild) {
+    svg.removeChild(svg.firstChild);
+  }
 
   if (points.length === 0) return;
 
