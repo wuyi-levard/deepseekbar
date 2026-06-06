@@ -73,10 +73,10 @@ export function renderSettings(
         <span>主题</span>
         <div class="theme-picker" data-role="theme-picker">
           ${THEMES.map(t => `
-            <label class="theme-opt ${s.theme === t.id ? "active" : ""}" data-theme="${t.id}">
-              <span class="theme-dot" style="background:${t.colors[0]}"></span>
-              ${t.name}
-            </label>
+            <button type="button" class="theme-swatch ${s.theme === t.id ? "active" : ""}" data-theme="${t.id}" title="${t.name}">
+              <span class="swatch-bar" style="background:${t.colors[0]}"></span>
+              <span class="swatch-bg" style="background:${t.colors[1]}"></span>
+            </button>
           `).join("")}
         </div>
       </label>
@@ -142,10 +142,10 @@ export function renderSettings(
   alertInput.addEventListener("change", () => h.onAlertThreshold(alertInput.value || "0"));
 
   // Theme picker
-  root.querySelectorAll<HTMLLabelElement>(".theme-opt").forEach(el => {
+  root.querySelectorAll<HTMLButtonElement>(".theme-swatch").forEach(el => {
     el.addEventListener("click", () => {
       const t = el.dataset.theme!;
-      root.querySelectorAll(".theme-opt").forEach(e => e.classList.remove("active"));
+      root.querySelectorAll(".theme-swatch").forEach(e => e.classList.remove("active"));
       el.classList.add("active");
       h.onThemeChange(t);
     });

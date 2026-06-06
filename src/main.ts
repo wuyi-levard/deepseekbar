@@ -398,6 +398,8 @@ app.addEventListener("dblclick", (e) => {
       }
       state = reduce(state, { type: "set_mode", mode: "settings" });
       render();
+    } else if (action === "export") {
+      exportCSV();
     } else if (action === "close") {
       state = reduce(state, { type: "set_mode", mode: "compact" });
       render();

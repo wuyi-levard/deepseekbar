@@ -42,8 +42,14 @@ pub fn get_api_key_status(
 }
 
 #[tauri::command]
-pub fn get_api_key() -> Result<Option<String>, AppError> {
-    Ok(store::load_api_key().ok())
+pub fn get_api_key(
+    scheduler: State<'_, Arc<Scheduler>>,
+) -> Result<Option<String>, AppError> {
+    // Try keyring first, fall back to SQLite (keyring may fail if
+    // Credential Manager is unavailable or the entry was never written)
+    Ok(store::load_api_key()
+        .ok()
+        .or_else(|| store::load_api_key_sqlite(&scheduler.store).ok().flatten()))
 }
 
 #[tauri::command]

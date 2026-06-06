@@ -25,7 +25,7 @@ const DEFAULTS: ChartOpts = {
   height: 200,
   marginLeft: 50,
   marginRight: 14,
-  marginTop: 10,
+  marginTop: 16,
   marginBottom: 26,
   stroke: "#4f8cff",
   fill: "rgba(79,140,255,0.10)",
@@ -150,10 +150,11 @@ export function renderLineChart(
     gl.setAttribute("stroke-width", "0.5");
     svg.appendChild(gl);
 
-    // tick label
+    // tick label — clamp y so the text baseline never goes above the margin
+    const labelY = Math.max(y + 4, plotY + 10);
     const txt = document.createElementNS(ns, "text");
     txt.setAttribute("x", String(plotX - 6));
-    txt.setAttribute("y", (y + 4).toFixed(1));
+    txt.setAttribute("y", labelY.toFixed(1));
     txt.setAttribute("text-anchor", "end");
     txt.setAttribute("fill", o.textFill);
     txt.setAttribute("font-size", "10");
@@ -165,20 +166,68 @@ export function renderLineChart(
   }
 
   // ===================================================================
-  // X-axis labels (pick ~5 evenly-spaced points)
+  // X-axis labels — pick by TIME intervals, not data-point index
   // ===================================================================
   const sameDay = isSameDay(sorted);
-  const labelStep = Math.max(1, Math.ceil(sorted.length / 5));
-  const shown = new Set<number>();
-
-  for (let i = 0; i < sorted.length; i += labelStep) {
-    shown.add(i);
+  const tSpanMs = tMax - tMin;
+  // Determine a nice label interval in ms: aim for ~5 labels
+  const roughStep = tSpanMs / 5;
+  // Snap to human-friendly intervals
+  const intervals = [
+    60_000, 300_000, 600_000, 900_000, 1_800_000, 3_600_000,
+    7_200_000, 14_400_000, 21_600_000, 43_200_000, 86_400_000,
+    172_800_000, 345_600_000, 604_800_000, 2_592_000_000,
+  ];
+  let labelIntervalMs = intervals[intervals.length - 1];
+  for (const iv of intervals) {
+    if (iv >= roughStep) { labelIntervalMs = iv; break; }
   }
-  // always include the last point
-  if (sorted.length > 1) shown.add(sorted.length - 1);
+  // Round tMin up to the next interval boundary
+  const firstLabel = Math.ceil(tMin / labelIntervalMs) * labelIntervalMs;
+  // Collect label times
+  const labelTimes: number[] = [];
+  for (let lt = firstLabel; lt <= tMax; lt += labelIntervalMs) {
+    labelTimes.push(lt);
+  }
+  // Always include the first and last data-point timestamps
+  const mustShow = new Set<number>([tMin, tMax]);
+  for (const lt of labelTimes) {
+    // Find the closest actual data point to this label time
+    let bestIdx = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < sorted.length; i++) {
+      const d = Math.abs(sorted[i].ts_utc - lt);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    }
+    mustShow.add(sorted[bestIdx].ts_utc);
+  }
+  // Also show first and last
+  mustShow.add(sorted[0].ts_utc);
+  if (sorted.length > 1) mustShow.add(sorted[sorted.length - 1].ts_utc);
 
-  for (const idx of shown) {
-    const p = sorted[idx];
+  // Deduplicate and sort
+  const uniqueLabels = [...new Set(mustShow)].sort((a, b) => a - b);
+  // If two labels are too close (within 15% of tSpan), drop the less important one
+  const minGap = tSpanMs * 0.12;
+  const finalLabels: number[] = [];
+  for (const lt of uniqueLabels) {
+    if (finalLabels.length === 0 || lt - finalLabels[finalLabels.length - 1] >= minGap) {
+      finalLabels.push(lt);
+    }
+  }
+  // Ensure first and last are present
+  if (!finalLabels.includes(sorted[0].ts_utc)) finalLabels.unshift(sorted[0].ts_utc);
+  if (!finalLabels.includes(sorted[sorted.length - 1].ts_utc)) finalLabels.push(sorted[sorted.length - 1].ts_utc);
+
+  for (const lt of finalLabels) {
+    // Find closest data point
+    let bestIdx = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < sorted.length; i++) {
+      const d = Math.abs(sorted[i].ts_utc - lt);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    }
+    const p = sorted[bestIdx];
     const x = xAt(p.ts_utc);
 
     // tick mark
