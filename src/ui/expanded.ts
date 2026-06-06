@@ -1,5 +1,5 @@
 import { formatBalance, toDecimal } from "../format";
-import { renderLine } from "../chart";
+import { renderLineChart } from "../chart";
 import type { UiState } from "../state";
 import { escapeText } from "../util";
 
@@ -39,10 +39,10 @@ export function renderExpanded(root: HTMLElement, s: UiState): void {
   if (hasHistory) {
     const svg = root.querySelector<SVGSVGElement>('svg[data-role="chart"]');
     if (svg) {
-      renderLine(
+      renderLineChart(
         svg,
         s.history.map((h) => ({ ts_utc: h.ts_utc, balance: h.balance })),
-        { width: 340, height: 160, padding: 10 },
+        { width: 350, height: 200 },
       );
     }
   }

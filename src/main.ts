@@ -82,7 +82,7 @@ function applyWindowSize() {
   } else if (state.mode === "settings") {
     win.setSize(new LogicalSize(420, 620)).catch((e: unknown) => console.warn("setSize settings:", e));
   } else {
-    win.setSize(new LogicalSize(380, 500)).catch((e: unknown) => console.warn("setSize expanded:", e));
+    win.setSize(new LogicalSize(380, 560)).catch((e: unknown) => console.warn("setSize expanded:", e));
   }
 }
 
