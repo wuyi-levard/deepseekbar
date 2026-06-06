@@ -79,8 +79,10 @@ function render() {
 function applyWindowSize() {
   if (state.mode === "compact") {
     void win.setSize(new LogicalSize(220, 60));
+  } else if (state.mode === "settings") {
+    void win.setSize(new LogicalSize(400, 520));
   } else {
-    void win.setSize(new LogicalSize(360, 320));
+    void win.setSize(new LogicalSize(380, 360));
   }
 }
 
@@ -358,9 +360,15 @@ async function init() {
     render();
   }, { passive: false });
 
-  app.addEventListener("contextmenu", (e) => {
+  app.addEventListener("contextmenu", async (e) => {
     e.preventDefault();
-    showContextMenu(e.clientX, e.clientY);
+    if (state.mode === "compact") {
+      state = reduce(state, { type: "refresh_started" });
+      render();
+      await invoke("trigger_refresh");
+    } else {
+      showContextMenu(e.clientX, e.clientY);
+    }
   });
 
   // Delegated click handler for expanded view buttons
