@@ -183,22 +183,41 @@ async function loadHistory() {
   historyLoaded = true;
 }
 
-async function exportCSV() {
+async function exportCSV(btnEl?: HTMLElement) {
+  const revert = () => {
+    if (btnEl) { btnEl.textContent = "导出"; btnEl.classList.remove("done"); }
+  };
   try {
+    // Feedback: show loading state
+    if (btnEl) { btnEl.textContent = "导出中…"; btnEl.classList.add("pulse"); }
+
     const h = await invoke("get_history", { days: 365 }) as Snapshot[];
-    if (!h.length) return;
-    let csv = "时间,余额(元),货币\n";
+    if (!h.length) {
+      if (btnEl) { btnEl.textContent = "无数据"; setTimeout(revert, 1500); }
+      return;
+    }
+    let csv = "﻿时间,余额(元),货币\n";
     for (const r of h) {
       csv += new Date(r.ts_utc).toISOString() + "," + r.balance + "," + r.currency + "\n";
     }
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "deepseekbar_" + new Date().toISOString().slice(0,10) + ".csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch {}
+
+    // Use native save dialog
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const defaultName = "deepseekbar_" + new Date().toISOString().slice(0, 10) + ".csv";
+    const path = await save({
+      defaultPath: defaultName,
+      filters: [{ name: "CSV 文件", extensions: ["csv"] }],
+    });
+    if (!path) { revert(); return; } // user cancelled
+
+    await invoke("save_file", { path, content: csv });
+
+    // Success feedback
+    if (btnEl) { btnEl.textContent = "已导出 ✓"; btnEl.classList.remove("pulse"); btnEl.classList.add("done"); setTimeout(revert, 2000); }
+  } catch (e) {
+    console.warn("exportCSV failed:", e);
+    if (btnEl) { btnEl.textContent = "导出失败"; setTimeout(revert, 2000); }
+  }
 }
 
 async function init() {
@@ -399,7 +418,8 @@ app.addEventListener("dblclick", (e) => {
       state = reduce(state, { type: "set_mode", mode: "settings" });
       render();
     } else if (action === "export") {
-      exportCSV();
+      exportCSV(btn as HTMLElement);
+      return;
     } else if (action === "close") {
       state = reduce(state, { type: "set_mode", mode: "compact" });
       render();

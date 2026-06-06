@@ -270,3 +270,9 @@ pub fn reset_data(
     let _ = store::delete_api_key();
     Ok(())
 }
+
+/// Save a UTF-8 file to disk (used by CSV export).
+#[tauri::command]
+pub fn save_file(path: String, content: String) -> Result<(), AppError> {
+    std::fs::write(&path, content).map_err(|e| AppError::Other(e.to_string()))
+}

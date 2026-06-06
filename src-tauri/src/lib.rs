@@ -20,6 +20,7 @@ pub fn run() {
             MacosLauncher::LaunchAgent,
             None,
         ))
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             let log_dir = app
@@ -128,6 +129,7 @@ pub fn run() {
             commands::set_theme,
             commands::get_refresh_interval,
             commands::set_refresh_interval,
+            commands::save_file,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

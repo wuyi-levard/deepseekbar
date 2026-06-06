@@ -175,6 +175,8 @@ html, body {
   border-color: var(--border-hover);
 }
 .row.actions button:active { transform: scale(0.97); }
+.row.actions button.pulse { animation: pulse 1.2s ease-in-out infinite; }
+.row.actions button.done { color: var(--good); border-color: var(--good); }
 
 .row.actions button.primary {
   background: var(--accent);
