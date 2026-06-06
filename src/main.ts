@@ -43,7 +43,7 @@ async function centerWindow() {
     if (!mon) return;
     const sf = mon.scaleFactor;
     const cx = Math.round((mon.position.x + mon.size.width / 2) / sf - 200);
-    const cy = Math.round((mon.position.y + mon.size.height / 2) / sf - 260);
+    const cy = Math.round((mon.position.y + mon.size.height / 2) / sf - 280);
     await win.setPosition(new PhysicalPosition(cx, cy));
   } catch {}
 }
@@ -78,11 +78,11 @@ function render() {
 
 function applyWindowSize() {
   if (state.mode === "compact") {
-    void win.setSize(new LogicalSize(220, 60));
+    void win.setSize(new LogicalSize(180, 56));
   } else if (state.mode === "settings") {
-    void win.setSize(new LogicalSize(400, 520));
+    void win.setSize(new LogicalSize(400, 560));
   } else {
-    void win.setSize(new LogicalSize(380, 360));
+    void win.setSize(new LogicalSize(380, 440));
   }
 }
 
@@ -202,15 +202,7 @@ async function exportCSV() {
 }
 
 async function init() {
-  // 0. Register global hotkey Ctrl+Shift+D to toggle window
-  try {
-    await register("Ctrl+Shift+D", async () => {
-      const vis = await win.isVisible();
-      if (vis) { await win.hide(); } else { await win.show(); await win.setFocus(); }
-    });
-  } catch {}
-
-  // 1. Register Tauri event listeners FIRST so events fired during the
+// 1. Register Tauri event listeners FIRST so events fired during the
   //    first-launch setup (e.g. balance:updated after the user saves a key)
   //    are not lost.
   unlistens.push(
@@ -359,6 +351,11 @@ async function init() {
     else if (state.mode === "expanded") state = reduce(state, { type: "set_mode", mode: "compact" });
     render();
   }, { passive: false });
+
+  // Register global hotkey (non-blocking, after critical handlers)
+  setTimeout(async () => {
+    try { await register("Ctrl+Shift+D", async () => { const vis = await win.isVisible(); if (vis) { await win.hide(); } else { await win.show(); await win.setFocus(); } }); } catch {}
+  }, 1000);
 
   app.addEventListener("contextmenu", async (e) => {
     e.preventDefault();
