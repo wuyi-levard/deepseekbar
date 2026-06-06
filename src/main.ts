@@ -32,6 +32,10 @@ function scheduleWindowStateSave() {
   }, 500);
 }
 
+function applyTheme(theme: string) {
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
 async function centerWindow() {
   try {
     const mon = await currentMonitor();
@@ -140,6 +144,21 @@ const settingsHandlers = (): SettingsHandlers => ({
     } catch {}
     location.reload();
   },
+  onAlertThreshold: async (threshold: string) => {
+    await invoke("set_alert_threshold", { threshold });
+    state = reduce(state, { type: "set_alert_threshold", threshold });
+  },
+  onPrivacyToggle: async (enabled: boolean) => {
+    await invoke("set_privacy_mode", { enabled });
+    state = reduce(state, { type: "set_privacy_mode", enabled });
+    render();
+  },
+  onThemeChange: async (theme: string) => {
+    await invoke("set_theme", { theme });
+    state = reduce(state, { type: "set_theme", theme });
+    applyTheme(theme);
+    render();
+  },
   onIntervalChange: async (secs: number) => {
     await invoke("set_refresh_interval", { secs });
     state = reduce(state, { type: "set_refresh_interval", secs });
@@ -179,6 +198,38 @@ async function init() {
         },
       });
       render();
+    }),
+    await listen<{ message: string }>("balance:alert", (e) => {
+      new Notification("DeepSeekBar 余额预警", { body: e.payload.message });
+    }),
+    await listen<{ mode: string }>("mode:changed", async (e) => {
+      if (e.payload.mode === "settings") {
+        const a = await invoke<boolean>("get_autostart");
+        state = reduce(state, { type: "set_autostart", enabled: a });
+        const interval = await invoke<number>("get_refresh_interval");
+        state = reduce(state, { type: "set_refresh_interval", secs: interval });
+        const alertThresh = await invoke<string | null>("get_alert_threshold");
+        if (alertThresh) state = reduce(state, { type: "set_alert_threshold", threshold: alertThresh });
+        const pm2 = await invoke<boolean>("get_privacy_mode");
+        state = reduce(state, { type: "set_privacy_mode", enabled: pm2 });
+        const theme2 = await invoke<string>("get_theme");
+        state = reduce(state, { type: "set_theme", theme: theme2 });
+        applyTheme(theme2);
+        const thresh = await invoke<string | null>("get_alert_threshold");
+        if (thresh) state = reduce(state, { type: "set_alert_threshold", threshold: thresh });
+        const pm = await invoke<boolean>("get_privacy_mode");
+        state = reduce(state, { type: "set_privacy_mode", enabled: pm });
+        const theme = await invoke<string>("get_theme");
+        state = reduce(state, { type: "set_theme", theme });
+        applyTheme(theme);
+        state = reduce(state, { type: "set_mode", mode: "settings" });
+        render();
+      } else if (e.payload.mode === "toggle_privacy") {
+        const pm = !state.privacyMode;
+        await invoke("set_privacy_mode", { enabled: pm });
+        state = reduce(state, { type: "set_privacy_mode", enabled: pm });
+        render();
+      }
     }),
     await listen<BalanceError>("balance:error", (e) => {
       const raw = e.payload.message ?? "";
@@ -297,7 +348,13 @@ async function init() {
   } catch {}
 
   // 4. Decide initial mode based on whether a key is configured.
-  const status = (await invoke("get_api_key_status")) as { configured: boolean };
+  const theme = await invoke<string>("get_theme");
+    applyTheme(theme);
+    state = reduce(state, { type: "set_theme", theme });
+    const pm = await invoke<boolean>("get_privacy_mode");
+    state = reduce(state, { type: "set_privacy_mode", enabled: pm });
+
+    const status = (await invoke("get_api_key_status")) as { configured: boolean };
   state = reduce(state, { type: "set_api_key_configured", configured: status.configured });
   if (status.configured) {
     const key = await invoke<string | null>("get_api_key");

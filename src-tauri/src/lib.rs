@@ -71,7 +71,9 @@ pub fn run() {
                 .expect("build client");
 
             let interval_secs = store::get_interval(&store);
-            let sched = Arc::new(Scheduler::new(state.clone(), store.clone(), client, interval_secs));
+            let mut sched = Scheduler::new(state.clone(), store.clone(), client, interval_secs);
+            sched.set_app_handle(app.handle().clone());
+            let sched = Arc::new(sched);
 
             // Seed in-memory API key cache from keyring (or SQLite fallback) at startup
             let seed_key = store::load_api_key()
@@ -117,6 +119,12 @@ pub fn run() {
             commands::get_autostart,
             commands::set_autostart,
             commands::reset_data,
+            commands::get_alert_threshold,
+            commands::set_alert_threshold,
+            commands::get_privacy_mode,
+            commands::set_privacy_mode,
+            commands::get_theme,
+            commands::set_theme,
             commands::get_refresh_interval,
             commands::set_refresh_interval,
         ])

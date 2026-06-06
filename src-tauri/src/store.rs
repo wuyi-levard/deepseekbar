@@ -227,6 +227,42 @@ pub fn has_api_key_any(store: &Store) -> bool {
     load_api_key().is_ok() || load_api_key_sqlite(store).ok().flatten().is_some()
 }
 
+
+pub fn get_alert_threshold(store: &Store) -> Option<rust_decimal::Decimal> {
+    store.get_state("alert_threshold")
+        .ok()
+        .flatten()
+        .and_then(|s| rust_decimal::Decimal::from_str_exact(&s).ok())
+}
+
+pub fn set_alert_threshold(store: &Store, threshold: &str) -> Result<(), AppError> {
+    store.set_state("alert_threshold", threshold)
+}
+
+pub fn get_privacy_mode(store: &Store) -> bool {
+    store.get_state("privacy_mode")
+        .ok()
+        .flatten()
+        .as_deref()
+        .unwrap_or("false")
+        == "true"
+}
+
+pub fn set_privacy_mode(store: &Store, enabled: bool) -> Result<(), AppError> {
+    store.set_state("privacy_mode", if enabled { "true" } else { "false" })
+}
+
+pub fn get_theme(store: &Store) -> String {
+    store.get_state("theme")
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "deepseek".to_string())
+}
+
+pub fn set_theme(store: &Store, theme: &str) -> Result<(), AppError> {
+    store.set_state("theme", theme)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

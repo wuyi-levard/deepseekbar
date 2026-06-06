@@ -2,7 +2,6 @@
 import type { Balance, ErrorKind, Snapshot, UiMode } from "./types";
 
 export interface UiState {
-  refreshInterval?: number;
   mode: UiMode;
   balance: Balance | null;
   prevAvailable: string | null;
@@ -13,6 +12,10 @@ export interface UiState {
   apiKey: string | null;
   pinned: boolean;
   autostartEnabled?: boolean;
+  refreshInterval?: number;
+  alertThreshold?: string;
+  privacyMode: boolean;
+  theme: string;
 }
 
 export const initialState: UiState = {
@@ -25,6 +28,8 @@ export const initialState: UiState = {
   apiKeyConfigured: false,
   apiKey: null,
   pinned: true,
+  privacyMode: false,
+  theme: "deepseek",
 };
 
 export type Action =
@@ -38,7 +43,10 @@ export type Action =
   | { type: "set_pinned"; pinned: boolean }
   | { type: "set_autostart"; enabled: boolean }
   | { type: "load_history"; history: Snapshot[] }
-  | { type: "set_refresh_interval"; secs: number };
+  | { type: "set_refresh_interval"; secs: number }
+  | { type: "set_alert_threshold"; threshold: string }
+  | { type: "set_privacy_mode"; enabled: boolean }
+  | { type: "set_theme"; theme: string };
 
 export function reduce(s: UiState, a: Action): UiState {
   switch (a.type) {
@@ -82,5 +90,11 @@ export function reduce(s: UiState, a: Action): UiState {
       return { ...s, history: a.history };
     case "set_refresh_interval":
       return { ...s, refreshInterval: a.secs };
+    case "set_alert_threshold":
+      return { ...s, alertThreshold: a.threshold };
+    case "set_privacy_mode":
+      return { ...s, privacyMode: a.enabled };
+    case "set_theme":
+      return { ...s, theme: a.theme };
   }
 }

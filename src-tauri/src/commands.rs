@@ -183,6 +183,51 @@ pub fn set_refresh_interval(
     Ok(())
 }
 
+#[tauri::command]
+pub fn get_alert_threshold(
+    scheduler: State<'_, Arc<Scheduler>>,
+) -> Result<Option<String>, AppError> {
+    Ok(store::get_alert_threshold(&scheduler.store).map(|d| d.to_string()))
+}
+
+#[tauri::command]
+pub fn set_alert_threshold(
+    scheduler: State<'_, Arc<Scheduler>>,
+    threshold: String,
+) -> Result<(), AppError> {
+    store::set_alert_threshold(&scheduler.store, &threshold)
+}
+
+#[tauri::command]
+pub fn get_privacy_mode(
+    scheduler: State<'_, Arc<Scheduler>>,
+) -> bool {
+    store::get_privacy_mode(&scheduler.store)
+}
+
+#[tauri::command]
+pub fn set_privacy_mode(
+    scheduler: State<'_, Arc<Scheduler>>,
+    enabled: bool,
+) -> Result<(), AppError> {
+    store::set_privacy_mode(&scheduler.store, enabled)
+}
+
+#[tauri::command]
+pub fn get_theme(
+    scheduler: State<'_, Arc<Scheduler>>,
+) -> String {
+    store::get_theme(&scheduler.store)
+}
+
+#[tauri::command]
+pub fn set_theme(
+    scheduler: State<'_, Arc<Scheduler>>,
+    theme: String,
+) -> Result<(), AppError> {
+    store::set_theme(&scheduler.store, &theme)
+}
+
 pub async fn emit_updated(app: &AppHandle, state: &AppState) {
     if let Some(b) = state.get_balance().await {
         let ts = state.last_refresh().await;

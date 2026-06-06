@@ -21,6 +21,27 @@
   --font: -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
 }
 
+
+
+/* ---- Theme: DeepSeek Blue (default) ---- */
+[data-theme="deepseek"] { --accent: #4f8cff; --accent-glow: rgba(79,140,255,0.18); --good: #34d399; --bg: rgba(18,20,26,0.82); --bg-solid: rgba(22,24,32,0.94); }
+[data-theme="emerald"] { --accent: #34d399; --accent-glow: rgba(52,211,153,0.18); --good: #34d399; --bg: rgba(12,18,14,0.85); --bg-solid: rgba(16,22,18,0.95); }
+[data-theme="sunset"]  { --accent: #fb923c; --accent-glow: rgba(251,146,60,0.18); --good: #34d399; --bg: rgba(22,16,14,0.85); --bg-solid: rgba(26,20,16,0.95); }
+[data-theme="lavender"] { --accent: #a78bfa; --accent-glow: rgba(167,139,250,0.18); --good: #34d399; --bg: rgba(18,16,26,0.85); --bg-solid: rgba(22,20,30,0.95); }
+
+/* ---- Theme picker ---- */
+.theme-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+.theme-opt {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 8px; border-radius: var(--radius-sm);
+  background: var(--surface); border: 1px solid var(--border);
+  cursor: pointer; font-size: 11px; color: var(--fg-dim);
+  transition: border-color var(--transition), background var(--transition);
+}
+.theme-opt:hover { border-color: var(--border-hover); }
+.theme-opt.active { border-color: var(--accent); background: var(--accent-glow); color: var(--fg); }
+.theme-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 10px; }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
@@ -206,6 +227,9 @@ html, body {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
+.field input[type="number"] { -moz-appearance: textfield; }
+.field input[type="number"]::-webkit-inner-spin-button,
+.field input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .field input::placeholder { color: var(--muted); }
 .field select {
   flex: 1;

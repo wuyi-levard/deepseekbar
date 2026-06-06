@@ -3,6 +3,7 @@
 use crate::deepseek::Balance;
 use crate::error::{classify_error, AppError, ErrorKind};
 use crate::state::AppState;
+use tauri::Emitter;
 use crate::store::{Snapshot, Store};
 use std::sync::Arc;
 
@@ -13,6 +14,7 @@ pub struct Scheduler {
     pub store: Arc<Store>,
     pub client: reqwest::Client,
     pub interval: std::time::Duration,
+    pub app_handle: Option<tauri::AppHandle>,
 }
 
 impl Scheduler {
@@ -27,7 +29,12 @@ impl Scheduler {
             store,
             client,
             interval: std::time::Duration::from_secs(interval_secs),
+            app_handle: None,
         }
+    }
+
+    pub fn set_app_handle(&mut self, handle: tauri::AppHandle) {
+        self.app_handle = Some(handle);
     }
 
     pub async fn tick(&self) -> Result<(), AppError> {
@@ -43,7 +50,26 @@ impl Scheduler {
         };
         let balance = crate::deepseek::fetch_balance(&self.client, &key).await?;
         self.persist_and_cache(&balance).await?;
+        self.check_balance_alert(&balance);
         Ok(())
+    }
+
+        fn check_balance_alert(&self, balance: &Balance) {
+        let threshold = match crate::store::get_alert_threshold(&self.store) {
+            Some(t) => t,
+            None => return,
+        };
+        if balance.available < threshold {
+            tracing::info!(
+                available = %balance.available,
+                threshold = %threshold,
+                "balance below alert threshold"
+            );
+            if let Some(ref handle) = self.app_handle {
+                let msg = format!("余额 ¥{} 低于预警线 ¥{}", balance.available, threshold);
+                let _ = handle.emit("balance:alert", serde_json::json!({ "message": msg, "available": balance.available.to_string(), "threshold": threshold.to_string() }));
+            }
+        }
     }
 
     pub async fn tick_with(&self, balance: Balance) -> Result<(), AppError> {
