@@ -45,23 +45,24 @@ export function renderSettings(
       </label>
       <div class="test-status" data-role="test-status">${escapeText(s.error?.message ?? "")}</div>
 
-      <label class="check">
-        <input type="checkbox" data-role="autostart" />
-        <span>${m.setAutoStart}</span>
-      </label>
-      <label class="check">
-        <input type="checkbox" data-role="pinned" ${s.pinned ? "checked" : ""} />
-        <span>${m.setPinned}</span>
-      </label>
-      <label class="check">
-        <input type="checkbox" data-role="privacy" ${s.privacyMode ? "checked" : ""} />
-        <span>${m.setPrivacy}</span>
-      </label>
+      <div class="checks-row">
+        <label class="check">
+          <input type="checkbox" data-role="autostart" />
+          <span>${m.setAutoStart}</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" data-role="pinned" ${s.pinned ? "checked" : ""} />
+          <span>${m.setPinned}</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" data-role="privacy" ${s.privacyMode ? "checked" : ""} />
+          <span>${m.setPrivacy}</span>
+        </label>
+      </div>
 
       <label class="field">
         <span>${m.setRefreshInterval}</span>
         <select data-role="interval">
-          <option value="60">${m.intv1m}</option>
           <option value="300" selected>${m.intv5m}</option>
           <option value="900">${m.intv15m}</option>
           <option value="1800">${m.intv30m}</option>
@@ -76,10 +77,6 @@ export function renderSettings(
 
       <div class="row actions">
         <button data-action="recharge">${m.setRecharge}</button>
-      </div>
-
-      <hr/>
-      <div class="row actions">
         <button data-action="check-update" id="btn-update">${m.setCheckUpdate}</button>
       </div>
       <div class="update-msg" id="update-msg"></div>

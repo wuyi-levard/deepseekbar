@@ -279,10 +279,12 @@ html, body {
   transition: color var(--transition);
 }
 
+.checks-row {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
 .check {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 4px;
   cursor: pointer;
-  padding: 2px 0;
   font-size: 12px;
   color: var(--fg-dim);
   transition: color var(--transition);
