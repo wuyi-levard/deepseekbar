@@ -98,6 +98,15 @@ const zh = {
 
   // ---- language ----
   langLabel: "语言",
+
+  // ---- update ----
+  setCheckUpdate: "检查更新",
+  setUpdateChecking: "检查中…",
+  setUpdateUpToDate: "已是最新版本",
+  setUpdateDownload: (v: string) => `下载 v${v}`,
+  setUpdateDownloading: (p: number) => `下载中 ${p}%`,
+  setUpdateInstall: "安装更新",
+  setUpdateError: "更新失败",
 };
 
 const en: typeof zh = {
@@ -172,6 +181,14 @@ const en: typeof zh = {
   exportBtn: "Export",
 
   langLabel: "Language",
+
+  setCheckUpdate: "Check for Updates",
+  setUpdateChecking: "Checking…",
+  setUpdateUpToDate: "Up to date",
+  setUpdateDownload: (v: string) => `Download v${v}`,
+  setUpdateDownloading: (p: number) => `Downloading ${p}%`,
+  setUpdateInstall: "Install Update",
+  setUpdateError: "Update failed",
 };
 
 // ---------------------------------------------------------------------------

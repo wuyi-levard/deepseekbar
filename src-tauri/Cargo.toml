@@ -22,7 +22,8 @@ tauri-plugin-autostart = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.40", features = ["sync", "rt-multi-thread", "macros", "time"] }
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+futures-util = "0.3"
 rusqlite = { version = "0.32", features = ["bundled"] }
 rust_decimal = { version = "1.36", features = ["serde-with-str"] }
 keyring = "3.6"

@@ -17,6 +17,11 @@ export interface UiState {
   alertThreshold?: string;
   alertMessage: string | null;
   lastRefreshMs: number;
+  updateStatus: "idle" | "checking" | "available" | "downloading" | "done" | "error";
+  updateInfo: { version: string; body: string } | null;
+  updateProgress: number;
+  updateMessage: string;
+  updatePath: string;
   privacyMode: boolean;
   theme: string;
 }
@@ -33,6 +38,11 @@ export const initialState: UiState = {
   pinned: true,
   alertMessage: null,
   lastRefreshMs: 0,
+  updateStatus: "idle",
+  updateInfo: null,
+  updateProgress: 0,
+  updateMessage: "",
+  updatePath: "",
   privacyMode: false,
   theme: "deepseek",
 };
@@ -52,6 +62,11 @@ export type Action =
   | { type: "set_alert_threshold"; threshold: string }
   | { type: "set_alert"; message: string }
   | { type: "clear_alert" }
+  | { type: "set_update_checking" }
+  | { type: "set_update_available"; info: { version: string; body: string } }
+  | { type: "set_update_progress"; percent: number }
+  | { type: "set_update_done"; path: string; version: string }
+  | { type: "set_update_error"; message: string }
   | { type: "set_privacy_mode"; enabled: boolean }
   | { type: "set_theme"; theme: string };
 
@@ -112,6 +127,16 @@ export function reduce(s: UiState, a: Action): UiState {
       return { ...s, alertMessage: a.message };
     case "clear_alert":
       return { ...s, alertMessage: null };
+    case "set_update_checking":
+      return { ...s, updateStatus: "checking", updateMessage: "", updateProgress: 0 };
+    case "set_update_available":
+      return { ...s, updateStatus: "available", updateInfo: a.info };
+    case "set_update_progress":
+      return { ...s, updateStatus: "downloading", updateProgress: a.percent };
+    case "set_update_done":
+      return { ...s, updateStatus: "done", updatePath: a.path, updateMessage: a.version, updateProgress: 100 };
+    case "set_update_error":
+      return { ...s, updateStatus: "error", updateMessage: a.message };
     case "set_privacy_mode":
       return { ...s, privacyMode: a.enabled };
     case "set_theme":

@@ -15,6 +15,9 @@ export interface SettingsHandlers {
   onPrivacyToggle(enabled: boolean): Promise<void>;
   onThemeChange(theme: string): Promise<void>;
   onLangChange(lang: string): Promise<void>;
+  onCheckUpdate(): Promise<void>;
+  onDownloadUpdate(): Promise<void>;
+  onInstallUpdate(): Promise<void>;
 }
 
 const THEMES = [
@@ -75,6 +78,15 @@ export function renderSettings(
 
       <div class="row actions">
         <button data-action="recharge">${m.setRecharge}</button>
+      </div>
+
+      <hr/>
+      <div class="row actions">
+        <button data-action="check-update" id="btn-update">${m.setCheckUpdate}</button>
+      </div>
+      <div class="update-status" data-role="update-status">
+        <div class="update-bar" id="update-bar"><div class="update-bar-fill" id="update-bar-fill" style="width:${s.updateProgress}%"></div></div>
+        <div class="update-msg" id="update-msg"></div>
       </div>
 
       <label class="field">
@@ -169,6 +181,52 @@ export function renderSettings(
     .addEventListener("click", async () => {
       await invoke("open_url", { url: "https://platform.deepseek.com/usage" });
     });
+
+  // Update button with refreshUpdateUI
+  (function wireUpdateUI() {
+    const updateBtn = root.querySelector<HTMLButtonElement>('button[data-action="check-update"]')!;
+    const updateMsg = root.querySelector<HTMLDivElement>("#update-msg")!;
+    const updateBar = root.querySelector<HTMLDivElement>("#update-bar")!;
+    const updateBarFill = root.querySelector<HTMLDivElement>("#update-bar-fill")!;
+    const refresh = () => {
+      if (s.updateStatus === "checking") {
+        updateBtn.textContent = t().setUpdateChecking; updateBtn.disabled = true;
+        updateBar.style.display = "none"; updateMsg.textContent = "";
+      } else if (s.updateStatus === "available" && s.updateInfo) {
+        updateBtn.textContent = t().setUpdateDownload(s.updateInfo.version);
+        updateBtn.disabled = false; updateBar.style.display = "none";
+        updateMsg.textContent = s.updateInfo.version;
+      } else if (s.updateStatus === "downloading") {
+        updateBtn.textContent = t().setUpdateDownloading(s.updateProgress);
+        updateBtn.disabled = true; updateBar.style.display = "block";
+        updateBarFill.style.width = s.updateProgress + "%"; updateMsg.textContent = "";
+      } else if (s.updateStatus === "done") {
+        updateBtn.textContent = t().setUpdateInstall; updateBtn.disabled = false;
+        updateBar.style.display = "block"; updateBarFill.style.width = "100%";
+        updateMsg.textContent = "";
+      } else if (s.updateStatus === "error") {
+        updateBtn.textContent = t().setCheckUpdate; updateBtn.disabled = false;
+        updateBar.style.display = "none"; updateMsg.textContent = s.updateMessage;
+      } else {
+        updateBtn.textContent = t().setCheckUpdate; updateBtn.disabled = false;
+        updateBar.style.display = "none"; updateMsg.textContent = "";
+      }
+    };
+    refresh();
+    updateBtn.addEventListener("click", async () => {
+      const st = s.updateStatus;
+      if (st === "idle" || st === "error") {
+        await h.onCheckUpdate();
+        // refresh is called by render() re-invocation
+      } else if (st === "available") {
+        h.onDownloadUpdate!();
+      } else if (st === "done") {
+        await h.onInstallUpdate();
+      }
+    });
+    // Expose refresh for re-call after render
+    (window as any).__refreshUpdateUI = refresh;
+  })();
 
   // Theme picker
   root.querySelectorAll<HTMLButtonElement>(".theme-swatch").forEach(el => {

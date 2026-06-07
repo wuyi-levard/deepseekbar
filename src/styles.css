@@ -380,6 +380,23 @@ html, body {
   50% { opacity: 0.4; }
 }
 
+/* ---- Update progress bar ---- */
+.update-status { margin-top: 2px; }
+.update-bar {
+  display: none;
+  height: 4px; border-radius: 2px;
+  background: var(--surface);
+  overflow: hidden;
+  margin-bottom: 2px;
+}
+.update-bar-fill {
+  height: 100%; width: 0%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 200ms ease;
+}
+.update-msg { font-size: 10px; color: var(--fg-dim); min-height: 15px; }
+
 /* ---- Alert banner (expanded view) ---- */
 .alert-banner {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;

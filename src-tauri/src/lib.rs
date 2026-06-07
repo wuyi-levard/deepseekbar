@@ -5,6 +5,7 @@ pub mod scheduler;
 pub mod state;
 pub mod store;
 pub mod tray;
+pub mod updater;
 
 use crate::scheduler::Scheduler;
 use crate::state::AppState;
@@ -131,6 +132,9 @@ pub fn run() {
             commands::set_refresh_interval,
             commands::save_file,
             commands::open_url,
+            commands::check_update,
+            commands::download_update,
+            commands::install_update,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
