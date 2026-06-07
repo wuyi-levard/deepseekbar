@@ -1,4 +1,5 @@
 // src/state.ts
+import { toDecimal } from "./format";
 import type { Balance, ErrorKind, Snapshot, UiMode } from "./types";
 
 export interface UiState {
@@ -14,6 +15,7 @@ export interface UiState {
   autostartEnabled?: boolean;
   refreshInterval?: number;
   alertThreshold?: string;
+  alertMessage: string | null;
   privacyMode: boolean;
   theme: string;
 }
@@ -28,6 +30,7 @@ export const initialState: UiState = {
   apiKeyConfigured: false,
   apiKey: null,
   pinned: true,
+  alertMessage: null,
   privacyMode: false,
   theme: "deepseek",
 };
@@ -45,6 +48,8 @@ export type Action =
   | { type: "load_history"; history: Snapshot[] }
   | { type: "set_refresh_interval"; secs: number }
   | { type: "set_alert_threshold"; threshold: string }
+  | { type: "set_alert"; message: string }
+  | { type: "clear_alert" }
   | { type: "set_privacy_mode"; enabled: boolean }
   | { type: "set_theme"; theme: string };
 
@@ -58,6 +63,13 @@ export function reduce(s: UiState, a: Action): UiState {
         a.snapshot && !s.history.find((h) => h.ts_utc === a.snapshot!.ts_utc)
           ? [...s.history, a.snapshot]
           : s.history;
+      // Auto-clear alert when balance recovers above threshold
+      let alertMessage = s.alertMessage;
+      if (alertMessage && s.alertThreshold) {
+        if (toDecimal(a.balance.available).greaterThanOrEqualTo(toDecimal(s.alertThreshold))) {
+          alertMessage = null;
+        }
+      }
       return {
         ...s,
         balance: a.balance,
@@ -65,6 +77,7 @@ export function reduce(s: UiState, a: Action): UiState {
         history,
         error: null,
         refreshing: false,
+        alertMessage,
       };
     }
     case "balance_error":
@@ -92,6 +105,10 @@ export function reduce(s: UiState, a: Action): UiState {
       return { ...s, refreshInterval: a.secs };
     case "set_alert_threshold":
       return { ...s, alertThreshold: a.threshold };
+    case "set_alert":
+      return { ...s, alertMessage: a.message };
+    case "clear_alert":
+      return { ...s, alertMessage: null };
     case "set_privacy_mode":
       return { ...s, privacyMode: a.enabled };
     case "set_theme":

@@ -105,6 +105,15 @@ html, body {
 }
 .compact[data-status="err-auth"] { border-color: rgba(248, 113, 113, 0.25); }
 
+/* -- Warning / low-balance alert -- */
+.compact[data-status="warn"] { border-color: rgba(251, 191, 36, 0.35); }
+.compact[data-status="warn"] .dot {
+  background: var(--warn);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+  animation: pulse 0.8s ease-in-out infinite;
+}
+.compact[data-status="warn"] .amount { color: var(--warn); }
+
 .compact .amount {
   font-size: 15px;
   font-weight: 600;
@@ -360,3 +369,35 @@ html, body {
 }
 .confirm-btns button.danger { color: var(--bad); border-color: rgba(248, 113, 113, 0.25); }
 .confirm-btns button.danger:hover { background: rgba(248, 113, 113, 0.08); }
+
+/* ---- Alert badge (compact bar) ---- */
+.compact .alert-badge {
+  font-size: 12px; line-height: 1;
+  animation: warn-flash 1s ease-in-out infinite;
+}
+@keyframes warn-flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ---- Alert banner (expanded view) ---- */
+.alert-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: var(--warn);
+  font-size: 12px; font-weight: 500;
+  animation: alert-in 300ms ease;
+}
+@keyframes alert-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.alert-dismiss {
+  background: transparent; border: none; color: var(--warn);
+  cursor: pointer; font-size: 13px; padding: 0 2px;
+  opacity: 0.6; transition: opacity var(--transition);
+}
+.alert-dismiss:hover { opacity: 1; }

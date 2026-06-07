@@ -240,6 +240,8 @@ async function init() {
       render();
     }),
     await listen<{ message: string }>("balance:alert", (e) => {
+      state = reduce(state, { type: "set_alert", message: e.payload.message });
+      render();
       new Notification("DeepSeekBar 余额预警", { body: e.payload.message });
     }),
     await listen<{ mode: string }>("mode:changed", async (e) => {
@@ -388,7 +390,11 @@ app.addEventListener("dblclick", (e) => {
     e.stopPropagation();
     const action = btn.dataset.action || (btn.classList.contains("close") ? "close" : null);
     if (!action) return;
-    if (action === "refresh") {
+    if (action === "dismiss-alert") {
+      state = reduce(state, { type: "clear_alert" });
+      render();
+      return;
+    } else if (action === "refresh") {
       state = reduce(state, { type: "refresh_started" });
       render();
       await invoke("trigger_refresh");

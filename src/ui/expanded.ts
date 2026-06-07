@@ -14,6 +14,7 @@ export function renderExpanded(root: HTMLElement, s: UiState): void {
 
   root.innerHTML = `
     <div class="expanded">
+      ${s.alertMessage ? `<div class="alert-banner">⚠ ${escapeText(s.alertMessage)}<button class="alert-dismiss" data-action="dismiss-alert">✕</button></div>` : ""}
       <div class="row top">
         <span class="label">余额</span>
         <span class="amount">${amount}</span>

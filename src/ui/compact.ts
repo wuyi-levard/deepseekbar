@@ -3,7 +3,9 @@ import { escapeAttr, escapeText } from "../util";
 import type { UiState } from "../state";
 
 export function renderCompact(root: HTMLElement, s: UiState): void {
+  const hasAlert = !!s.alertMessage;
   const status =
+    hasAlert ? "warn" :
     s.refreshing ? "pulse" :
     s.error ? (s.error.kind === "auth" ? "err-auth" : "err") :
     s.balance ? "ok" : "init";
@@ -19,12 +21,13 @@ export function renderCompact(root: HTMLElement, s: UiState): void {
     ? formatDelta(s.prevAvailable, s.balance.available)
     : "";
 
-  const tooltip = s.error?.message ?? "";
+  const tooltip = hasAlert ? s.alertMessage! : (s.error?.message ?? "");
 
   root.innerHTML = `
     <div class="compact" data-status="${status}" title="${escapeAttr(tooltip)}">
       <span class="dot" aria-hidden="true"></span>
       <span class="amount">${escapeText(display)}</span>
+      ${hasAlert ? `<span class="alert-badge">⚠</span>` : ""}
       <span class="delta">${escapeText(delta)}</span>
     </div>
   `;
