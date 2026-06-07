@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use tauri::Emitter;
 
 const REPO: &str = "wuyi-levard/deepseekbar";
-const USER_AGENT: &str = "deepseekbar-updater/1.0";
+const USER_AGENT: &str = "DeepSeekBar (Windows desktop app)";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateInfo {
@@ -48,18 +48,31 @@ pub async fn check_update(current_version: &str) -> Result<Option<UpdateInfo>, A
         "https://api.github.com/repos/{}/releases/latest",
         REPO
     );
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .user_agent(USER_AGENT)
+        .build()
+        .map_err(|e| AppError::Other(e.to_string()))?;
+
     let resp = client
         .get(&url)
-        .header("User-Agent", USER_AGENT)
         .header("Accept", "application/vnd.github+json")
+        .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await?;
 
     let status = resp.status();
     if !status.is_success() {
         let text = resp.text().await.unwrap_or_default();
-        return Err(AppError::HttpStatus(status.as_u16(), text));
+        // Try to extract GitHub error message from JSON body
+        let msg = if let Ok(err) = serde_json::from_str::<serde_json::Value>(&text) {
+            err.get("message")
+                .and_then(|m| m.as_str())
+                .unwrap_or(&text)
+                .to_string()
+        } else {
+            text
+        };
+        return Err(AppError::HttpStatus(status.as_u16(), msg));
     }
 
     let rel: GhRelease = resp.json().await.map_err(|e| AppError::Parse(e.to_string()))?;
@@ -92,12 +105,11 @@ pub async fn download_installer(
     app: &tauri::AppHandle,
     version: &str,
 ) -> Result<PathBuf, AppError> {
-    let client = reqwest::Client::new();
-    let resp = client
-        .get(url)
-        .header("User-Agent", USER_AGENT)
-        .send()
-        .await?;
+    let client = reqwest::Client::builder()
+        .user_agent(USER_AGENT)
+        .build()
+        .map_err(|e| AppError::Other(e.to_string()))?;
+    let resp = client.get(url).send().await?;
 
     let total = resp.content_length().unwrap_or(0);
     let filename = format!("DeepSeekBar_Update_{}_x64-setup.exe", version);
