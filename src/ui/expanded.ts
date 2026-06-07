@@ -6,17 +6,13 @@ import { escapeText } from "../util";
 
 function lastSyncText(ms: number): string {
   if (!ms) return "";
-  const now = Date.now();
-  const diff = now - ms;
-  if (diff < 60_000) return t().timeJustNow;
-  if (diff < 3_600_000) return t().timeMinAgo(Math.round(diff / 60_000));
   const d = new Date(ms);
-  const today = new Date();
-  const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  if (d.toDateString() === today.toDateString()) {
-    return `${t().timeToday} ${time}`;
-  }
-  return `${d.getMonth() + 1}/${d.getDate()} ${time}`;
+  const mon = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const ss = String(d.getSeconds()).padStart(2, "0");
+  return `${mon}-${day} ${hh}:${mm}:${ss}`;
 }
 
 export function renderExpanded(root: HTMLElement, s: UiState): void {

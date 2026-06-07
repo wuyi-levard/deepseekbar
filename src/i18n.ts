@@ -32,11 +32,6 @@ const zh = {
   expBtnSettings: "设置",
   expBtnExport: "导出",
 
-  // ---- time ago ----
-  timeJustNow: "刚刚",
-  timeMinAgo: (n: number) => `${n} 分钟前`,
-  timeToday: "今天",
-
   // ---- settings ----
   setTitle: "设置",
   setApiKey: "API Key",
@@ -118,10 +113,6 @@ const en: typeof zh = {
   expBtnRefresh: "Refresh",
   expBtnSettings: "Settings",
   expBtnExport: "Export",
-
-  timeJustNow: "just now",
-  timeMinAgo: (n: number) => `${n} min ago`,
-  timeToday: "Today",
 
   setTitle: "Settings",
   setApiKey: "API Key",
