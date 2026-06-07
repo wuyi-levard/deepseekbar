@@ -44,6 +44,9 @@ impl Scheduler {
     /// Execute a refresh cycle. Uses `tokio::sync::Mutex` (not `std::sync::Mutex`)
     /// because the guard is held across `.await` points (the HTTP fetch). This
     /// serializes all refresh attempts so only one API call is in-flight at a time.
+    ///
+    /// Emits `balance:updated` to the frontend on success, so both auto-refresh
+    /// (background loop) and manual refresh (`trigger_refresh`) update the UI.
     pub async fn tick(&self) -> Result<(), AppError> {
         let _g = self.state.refresh_lock.lock().await;
         let key = match self.state.get_api_key().await {
@@ -58,7 +61,28 @@ impl Scheduler {
         let balance = crate::deepseek::fetch_balance(&self.client, &key).await?;
         self.persist_and_cache(&balance).await?;
         self.check_balance_alert(&balance);
+
+        // Emit event so the frontend updates the UI
+        self.emit_balance_updated();
+
         Ok(())
+    }
+
+    /// Send the current cached balance to the frontend.
+    fn emit_balance_updated(&self) {
+        if let Some(ref handle) = self.app_handle {
+            let state = self.state.clone();
+            let handle = handle.clone();
+            tauri::async_runtime::spawn(async move {
+                if let Some(b) = state.get_balance().await {
+                    let ts = state.last_refresh().await;
+                    let _ = handle.emit("balance:updated", serde_json::json!({
+                        "balance": &b,
+                        "ts_utc": ts,
+                    }));
+                }
+            });
+        }
     }
 
     fn check_balance_alert(&self, balance: &Balance) {
@@ -100,6 +124,7 @@ pub async fn tick_with_key(&self, key: &str) -> Result<(), AppError> {
         let _g = self.state.refresh_lock.lock().await;
         let balance = crate::deepseek::fetch_balance(&self.client, key).await?;
         self.persist_and_cache(&balance).await?;
+        self.emit_balance_updated();
         Ok(())
     }
 
