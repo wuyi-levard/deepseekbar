@@ -3,13 +3,30 @@ import { renderLineChart } from "../chart";
 import type { UiState } from "../state";
 import { escapeText } from "../util";
 
+function lastSyncText(ms: number): string {
+  if (!ms) return "";
+  const now = Date.now();
+  const diff = now - ms;
+  if (diff < 60_000) return "刚刚";
+  if (diff < 3_600_000) return `${Math.round(diff / 60_000)} 分钟前`;
+  const d = new Date(ms);
+  const today = new Date();
+  if (d.toDateString() === today.toDateString()) {
+    return `今天 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 export function renderExpanded(root: HTMLElement, s: UiState): void {
   const amount = s.balance
     ? `¥ ${formatBalance(s.balance.available)}`
     : s.error?.kind === "auth" ? "AUTH" : "——";
 
   const hasHistory = s.history.length > 0;
-  const next = s.balance && !s.error ? "● 已同步" : `● 状态：${s.error?.message ?? "未知"}`;
+  const sync = s.lastRefreshMs ? lastSyncText(s.lastRefreshMs) : "";
+  const next = s.balance && !s.error
+    ? `● 已同步${sync ? `（${sync}）` : ""}`
+    : `● 状态：${s.error?.message ?? "未知"}`;
   const empty = !hasHistory;
 
   root.innerHTML = `

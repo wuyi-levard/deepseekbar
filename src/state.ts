@@ -16,6 +16,7 @@ export interface UiState {
   refreshInterval?: number;
   alertThreshold?: string;
   alertMessage: string | null;
+  lastRefreshMs: number;
   privacyMode: boolean;
   theme: string;
 }
@@ -31,6 +32,7 @@ export const initialState: UiState = {
   apiKey: null,
   pinned: true,
   alertMessage: null,
+  lastRefreshMs: 0,
   privacyMode: false,
   theme: "deepseek",
 };
@@ -78,6 +80,7 @@ export function reduce(s: UiState, a: Action): UiState {
         error: null,
         refreshing: false,
         alertMessage,
+        lastRefreshMs: a.snapshot?.ts_utc ?? Date.now(),
       };
     }
     case "balance_error":
