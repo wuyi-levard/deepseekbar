@@ -1,5 +1,6 @@
 import { formatBalance, toDecimal } from "../format";
 import { renderLineChart } from "../chart";
+import { t } from "../i18n";
 import type { UiState } from "../state";
 import { escapeText } from "../util";
 
@@ -7,49 +8,51 @@ function lastSyncText(ms: number): string {
   if (!ms) return "";
   const now = Date.now();
   const diff = now - ms;
-  if (diff < 60_000) return "刚刚";
-  if (diff < 3_600_000) return `${Math.round(diff / 60_000)} 分钟前`;
+  if (diff < 60_000) return t().timeJustNow;
+  if (diff < 3_600_000) return t().timeMinAgo(Math.round(diff / 60_000));
   const d = new Date(ms);
   const today = new Date();
+  const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   if (d.toDateString() === today.toDateString()) {
-    return `今天 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    return `${t().timeToday} ${time}`;
   }
-  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return `${d.getMonth() + 1}/${d.getDate()} ${time}`;
 }
 
 export function renderExpanded(root: HTMLElement, s: UiState): void {
+  const m = t();
   const amount = s.balance
     ? `¥ ${formatBalance(s.balance.available)}`
-    : s.error?.kind === "auth" ? "AUTH" : "——";
+    : s.error?.kind === "auth" ? m.compactAuth : m.compactEmpty;
 
   const hasHistory = s.history.length > 0;
   const sync = s.lastRefreshMs ? lastSyncText(s.lastRefreshMs) : "";
   const next = s.balance && !s.error
-    ? `● 已同步${sync ? `（${sync}）` : ""}`
-    : `● 状态：${s.error?.message ?? "未知"}`;
+    ? `● ${m.expSynced}${sync ? `（${sync}）` : ""}`
+    : `● ${m.expUnknown}${s.error?.message ? `：${s.error.message}` : ""}`;
   const empty = !hasHistory;
 
   root.innerHTML = `
     <div class="expanded">
       ${s.alertMessage ? `<div class="alert-banner">⚠ ${escapeText(s.alertMessage)}<button class="alert-dismiss" data-action="dismiss-alert">✕</button></div>` : ""}
       <div class="row top">
-        <span class="label">余额</span>
+        <span class="label">${m.expLabelBalance}</span>
         <span class="amount">${amount}</span>
         <button class="close" aria-label="关闭">✕</button>
       </div>
       <hr/>
       <div class="chart-wrap">
-        ${empty ? `<div class="empty">暂无趋势数据，下次刷新后将开始记录</div>` : `<svg class="chart" data-role="chart"></svg>`}
+        ${empty ? `<div class="empty">${m.expEmptyChart}</div>` : `<svg class="chart" data-role="chart"></svg>`}
         ${hasHistory ? `<div class="row stats">
-          <span>高 ${formatBalance(max(s.history))}</span>
-          <span>低 ${formatBalance(min(s.history))}</span>
+          <span>${m.expHigh} ${formatBalance(max(s.history))}</span>
+          <span>${m.expLow} ${formatBalance(min(s.history))}</span>
         </div>` : ""}
       </div>
       <div class="row status">${escapeText(next)}</div>
       <div class="row actions">
-        <button data-action="refresh">立即刷新</button>
-        <button data-action="settings">设置</button>
-        <button data-action="export">导出</button>
+        <button data-action="refresh">${m.expBtnRefresh}</button>
+        <button data-action="settings">${m.expBtnSettings}</button>
+        <button data-action="export">${m.expBtnExport}</button>
       </div>
     </div>
   `;

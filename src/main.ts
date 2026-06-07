@@ -8,6 +8,7 @@ import {
 } from "@tauri-apps/api/window";
 import { register } from "@tauri-apps/plugin-global-shortcut";
 import "./styles.css";
+import { t, switchLang } from "./i18n";
 import { renderCompact } from "./ui/compact";
 import { renderExpanded } from "./ui/expanded";
 import { renderSettings, type SettingsHandlers } from "./ui/settings";
@@ -106,20 +107,24 @@ async function saveWindowState() {
 
 const settingsHandlers = (): SettingsHandlers => ({
   onTest: async (key) => {
-    if (!key.trim()) return { ok: false, error: "请先填写 API key" };
+    if (!key.trim()) return { ok: false, error: t().setTestEmpty };
     try {
       const preview = await invoke<string>("test_api_key", { key });
       return { ok: true, preview };
     } catch (e) {
       const msg = String(e);
       if (msg.includes("401") || msg.includes("403") || msg.toLowerCase().includes("unauthorized")) {
-        return { ok: false, error: "API key 无效或无权访问" };
+        return { ok: false, error: t().errAuth };
       }
       if (msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("connect")) {
-        return { ok: false, error: "网络不通，请检查连接" };
+        return { ok: false, error: t().errNetwork };
       }
       return { ok: false, error: msg };
     }
+  },
+  onLangChange: async (l) => {
+    switchLang(l as "zh" | "en");
+    render();
   },
   onSave: async (key) => {
     await invoke("save_api_key", { key });
@@ -185,38 +190,35 @@ async function loadHistory() {
 
 async function exportCSV(btnEl?: HTMLElement) {
   const revert = () => {
-    if (btnEl) { btnEl.textContent = "导出"; btnEl.classList.remove("done"); }
+    if (btnEl) { btnEl.textContent = t().exportBtn; btnEl.classList.remove("done"); }
   };
   try {
-    // Feedback: show loading state
-    if (btnEl) { btnEl.textContent = "导出中…"; btnEl.classList.add("pulse"); }
+    if (btnEl) { btnEl.textContent = t().exporting; btnEl.classList.add("pulse"); }
 
     const h = await invoke("get_history", { days: 365 }) as Snapshot[];
     if (!h.length) {
-      if (btnEl) { btnEl.textContent = "无数据"; setTimeout(revert, 1500); }
+      if (btnEl) { btnEl.textContent = t().exportNoData; setTimeout(revert, 1500); }
       return;
     }
-    let csv = "﻿时间,余额(元),货币\n";
+    let csv = "﻿" + t().exportCSVHeader + "\n";
     for (const r of h) {
       csv += new Date(r.ts_utc).toISOString() + "," + r.balance + "," + r.currency + "\n";
     }
 
-    // Use native save dialog
     const { save } = await import("@tauri-apps/plugin-dialog");
-    const defaultName = "deepseekbar_" + new Date().toISOString().slice(0, 10) + ".csv";
+    const defaultName = t().exportFileName + "_" + new Date().toISOString().slice(0, 10) + ".csv";
     const path = await save({
       defaultPath: defaultName,
-      filters: [{ name: "CSV 文件", extensions: ["csv"] }],
+      filters: [{ name: t().exportFilterName, extensions: ["csv"] }],
     });
-    if (!path) { revert(); return; } // user cancelled
+    if (!path) { revert(); return; }
 
     await invoke("save_file", { path, content: csv });
 
-    // Success feedback
-    if (btnEl) { btnEl.textContent = "已导出 ✓"; btnEl.classList.remove("pulse"); btnEl.classList.add("done"); setTimeout(revert, 2000); }
+    if (btnEl) { btnEl.textContent = t().exportDone; btnEl.classList.remove("pulse"); btnEl.classList.add("done"); setTimeout(revert, 2000); }
   } catch (e) {
     console.warn("exportCSV failed:", e);
-    if (btnEl) { btnEl.textContent = "导出失败"; setTimeout(revert, 2000); }
+    if (btnEl) { btnEl.textContent = t().exportFail; setTimeout(revert, 2000); }
   }
 }
 
@@ -242,7 +244,7 @@ async function init() {
     await listen<{ message: string }>("balance:alert", (e) => {
       state = reduce(state, { type: "set_alert", message: e.payload.message });
       render();
-      new Notification("DeepSeekBar 余额预警", { body: e.payload.message });
+      new Notification(t().notifTitle, { body: e.payload.message });
     }),
     await listen<{ mode: string }>("mode:changed", async (e) => {
       if (e.payload.mode === "settings") {
@@ -269,7 +271,7 @@ async function init() {
     await listen<BalanceError>("balance:error", (e) => {
       const raw = e.payload.message ?? "";
       const friendly = raw.includes("No matching entry found")
-        ? "密钥未存储，请在设置中重新保存 API key"
+        ? t().msgKeyMissing
         : raw;
       state = reduce(state, {
         type: "balance_error",
@@ -466,13 +468,14 @@ function showContextMenu(x: number, y: number) {
   m.className = "ctx-menu";
   m.style.left = `${x}px`;
   m.style.top = `${y}px`;
+  const cm = t();
   m.innerHTML = `
-    <button data-act="refresh">立即刷新</button>
-    <button data-act="toggle">${state.mode === "compact" ? "展开" : "收起"}</button>
+    <button data-act="refresh">${cm.ctxRefresh}</button>
+    <button data-act="toggle">${state.mode === "compact" ? cm.ctxExpand : cm.ctxCollapse}</button>
     <hr/>
-    <button data-act="settings">设置…</button>
+    <button data-act="settings">${cm.ctxSettings}</button>
     <hr/>
-    <button data-act="export">导出 CSV</button>
+    <button data-act="export">${cm.ctxExport}</button>
 
   `;
   document.body.appendChild(m);
@@ -510,5 +513,5 @@ window.addEventListener("beforeunload", () => {
 });
 
 init().catch((e) => {
-  app.textContent = `init failed: ${String(e)}`;
+  app.textContent = t().msgInitFailed(String(e));
 });

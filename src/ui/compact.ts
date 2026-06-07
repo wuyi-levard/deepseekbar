@@ -1,4 +1,5 @@
 ﻿import { formatBalance, formatDelta } from "../format";
+import { t } from "../i18n";
 import { escapeAttr, escapeText } from "../util";
 import type { UiState } from "../state";
 
@@ -12,10 +13,10 @@ export function renderCompact(root: HTMLElement, s: UiState): void {
 
   let display: string;
   if (s.privacyMode) display = "●●●";
-  else if (s.error?.kind === "auth") display = "AUTH";
-  else if (s.error) display = "——";
+  else if (s.error?.kind === "auth") display = t().compactAuth;
+  else if (s.error) display = t().compactEmpty;
   else if (s.balance) display = `¥ ${formatBalance(s.balance.available)}`;
-  else display = "——";
+  else display = t().compactEmpty;
 
   const delta = s.balance && s.prevAvailable
     ? formatDelta(s.prevAvailable, s.balance.available)

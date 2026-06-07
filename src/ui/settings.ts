@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { t, LANGS, switchLang, lang } from "../i18n";
 import type { UiState } from "../state";
 import { escapeText } from "../util";
 
@@ -13,13 +14,14 @@ export interface SettingsHandlers {
   onAlertThreshold(threshold: string): Promise<void>;
   onPrivacyToggle(enabled: boolean): Promise<void>;
   onThemeChange(theme: string): Promise<void>;
+  onLangChange(lang: string): Promise<void>;
 }
 
 const THEMES = [
-  { id: "deepseek", name: "深海蓝", colors: ["#4f8cff", "#1a1b2e"] },
-  { id: "emerald", name: "翡翠绿", colors: ["#34d399", "#0f1a14"] },
-  { id: "sunset", name: "日落橙", colors: ["#fb923c", "#1c1510"] },
-  { id: "lavender", name: "薰衣草", colors: ["#a78bfa", "#171320"] },
+  { id: "deepseek", name: () => t().themeDeepseek, colors: ["#4f8cff", "#1a1b2e"] },
+  { id: "emerald", name: () => t().themeEmerald, colors: ["#34d399", "#0f1a14"] },
+  { id: "sunset", name: () => t().themeSunset, colors: ["#fb923c", "#1c1510"] },
+  { id: "lavender", name: () => t().themeLavender, colors: ["#a78bfa", "#171320"] },
 ];
 
 export function renderSettings(
@@ -27,58 +29,66 @@ export function renderSettings(
   s: UiState,
   h: SettingsHandlers,
 ): void {
+  const m = t();
   root.innerHTML = `
     <div class="settings">
       <div class="row top">
-        <span class="label">设置</span>
+        <span class="label">${m.setTitle}</span>
         <button class="close" aria-label="关闭">✕</button>
       </div>
 
       <label class="field">
-        <span>API Key</span>
+        <span>${m.setApiKey}</span>
         <input type="password" data-role="key" autocomplete="off" spellcheck="false" />
-        <button data-action="test">测试</button>
+        <button data-action="test">${m.setTest}</button>
       </label>
       <div class="test-status" data-role="test-status">${escapeText(s.error?.message ?? "")}</div>
 
       <label class="check">
         <input type="checkbox" data-role="autostart" />
-        <span>开机自启</span>
+        <span>${m.setAutoStart}</span>
       </label>
       <label class="check">
         <input type="checkbox" data-role="pinned" ${s.pinned ? "checked" : ""} />
-        <span>窗口置顶</span>
+        <span>${m.setPinned}</span>
       </label>
       <label class="check">
         <input type="checkbox" data-role="privacy" ${s.privacyMode ? "checked" : ""} />
-        <span>隐私模式</span>
+        <span>${m.setPrivacy}</span>
       </label>
 
       <label class="field">
-        <span>刷新间隔</span>
+        <span>${m.setRefreshInterval}</span>
         <select data-role="interval">
-          <option value="60">1 分钟</option>
-          <option value="300" selected>5 分钟</option>
-          <option value="900">15 分钟</option>
-          <option value="1800">30 分钟</option>
-          <option value="3600">1 小时</option>
+          <option value="60">${m.intv1m}</option>
+          <option value="300" selected>${m.intv5m}</option>
+          <option value="900">${m.intv15m}</option>
+          <option value="1800">${m.intv30m}</option>
+          <option value="3600">${m.intv1h}</option>
         </select>
       </label>
 
       <label class="field">
-        <span>余额预警</span>
-        <input type="number" data-role="alert-threshold" min="0" step="0.01" placeholder="留空=关闭预警" />
+        <span>${m.setAlertThreshold}</span>
+        <input type="number" data-role="alert-threshold" min="0" step="0.01" placeholder="${m.setAlertPlaceholder}" />
       </label>
 
       <div class="row actions">
-        <button data-action="recharge">去充值 ↗</button>
+        <button data-action="recharge">${m.setRecharge}</button>
       </div>
 
       <label class="field">
-        <span>主题</span>
+        <span>${m.langLabel}</span>
+        <select data-role="lang">
+          ${LANGS.map(l => `<option value="${l.id}" ${lang() === l.id ? "selected" : ""}>${l.name}</option>`).join("")}
+        </select>
+      </label>
+
+      <label class="field">
+        <span>${m.setTheme}</span>
         <div class="theme-picker" data-role="theme-picker">
           ${THEMES.map(t => `
-            <button type="button" class="theme-swatch ${s.theme === t.id ? "active" : ""}" data-theme="${t.id}" title="${t.name}">
+            <button type="button" class="theme-swatch ${s.theme === t.id ? "active" : ""}" data-theme="${t.id}" title="${t.name()}">
               <span class="swatch-bar" style="background:${t.colors[0]}"></span>
               <span class="swatch-bg" style="background:${t.colors[1]}"></span>
             </button>
@@ -87,19 +97,19 @@ export function renderSettings(
       </label>
 
       <div class="row actions">
-        <button data-action="save" class="primary">保存</button>
+        <button data-action="save" class="primary">${m.setSave}</button>
       </div>
       <hr/>
       <div class="row actions">
-        <button data-action="reset" class="danger">重置数据</button>
+        <button data-action="reset" class="danger">${m.setReset}</button>
       </div>
       <div class="confirm-overlay" style="display:none">
         <div class="confirm-box">
-          <p>确定要重置所有数据吗？</p>
-          <p class="hint">这会删除 API key 和历史记录。</p>
+          <p>${m.setResetTitle}</p>
+          <p class="hint">${m.setResetHint}</p>
           <div class="confirm-btns">
-            <button class="confirm-cancel">取消</button>
-            <button class="confirm-ok danger">确认重置</button>
+            <button class="confirm-cancel">${m.setResetCancel}</button>
+            <button class="confirm-ok danger">${m.setResetConfirm}</button>
           </div>
         </div>
       </div>
@@ -128,10 +138,10 @@ export function renderSettings(
   // Event listeners
   testBtn.addEventListener("click", async () => {
     testBtn.disabled = true;
-    status.textContent = "测试中…";
+    status.textContent = t().setTestTesting;
     const r = await h.onTest(keyInput.value);
     testBtn.disabled = false;
-    status.textContent = r.ok ? `✓ 连接成功，预览余额 ¥ ${r.preview ?? "?"}` : `✗ ${r.error ?? "测试失败"}`;
+    status.textContent = r.ok ? t().setTestOK(r.preview ?? "?") : t().setTestFail(r.error ?? t().setTestEmpty);
   });
 
   saveBtn.addEventListener("click", async () => {
@@ -146,7 +156,15 @@ export function renderSettings(
   intervalSelect.addEventListener("change", () => h.onIntervalChange(Number(intervalSelect.value)));
   alertInput.addEventListener("change", () => h.onAlertThreshold(alertInput.value));
 
-  // Recharge button: open DeepSeek platform in browser
+  // Language selector
+  root.querySelector<HTMLSelectElement>('select[data-role="lang"]')!
+    .addEventListener("change", async (e) => {
+      const l = (e.target as HTMLSelectElement).value;
+      switchLang(l as "zh" | "en");
+      await h.onLangChange(l);
+    });
+
+  // Recharge button
   root.querySelector<HTMLButtonElement>('[data-action="recharge"]')!
     .addEventListener("click", async () => {
       await invoke("open_url", { url: "https://platform.deepseek.com/usage" });
