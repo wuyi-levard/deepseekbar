@@ -166,12 +166,6 @@ fn backup_path_for(db_path: &std::path::Path) -> std::path::PathBuf {
         .join("data.db")
 }
 
-/// Backup database to LOCALAPPDATA so data survives NSIS uninstall/reinstall
-pub fn backup_db(db_path: &std::path::Path) {
-    let backup_path = backup_path_for(db_path);
-    let _ = std::fs::create_dir_all(backup_path.parent().unwrap());
-    let _ = std::fs::copy(db_path, &backup_path);
-}
 pub const DEFAULT_INTERVAL_SECS: u64 = 300;
 
 pub fn get_interval(store: &Store) -> u64 {

@@ -1,7 +1,7 @@
 // src-tauri/src/scheduler.rs
 
 use crate::deepseek::Balance;
-use crate::error::{classify_error, AppError, ErrorKind};
+use crate::error::AppError;
 use crate::state::AppState;
 use tauri::Emitter;
 use crate::store::{Snapshot, Store};
@@ -148,10 +148,6 @@ pub async fn tick_with_key(&self, key: &str) -> Result<(), AppError> {
         self.state.set_balance(b.clone()).await;
         Ok(())
     }
-}
-
-pub fn kind(e: &AppError) -> ErrorKind {
-    classify_error(e)
 }
 
 /// Fallback: try keyring with retries. Returns None if keyring is unavailable.

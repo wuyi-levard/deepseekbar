@@ -255,13 +255,6 @@ async function init() {
         const theme2 = await invoke<string>("get_theme");
         state = reduce(state, { type: "set_theme", theme: theme2 });
         applyTheme(theme2);
-        const thresh = await invoke<string | null>("get_alert_threshold");
-        if (thresh) state = reduce(state, { type: "set_alert_threshold", threshold: thresh });
-        const pm = await invoke<boolean>("get_privacy_mode");
-        state = reduce(state, { type: "set_privacy_mode", enabled: pm });
-        const theme = await invoke<string>("get_theme");
-        state = reduce(state, { type: "set_theme", theme });
-        applyTheme(theme);
         state = reduce(state, { type: "set_mode", mode: "settings" });
         render();
       } else if (e.payload.mode === "toggle_privacy") {
@@ -498,8 +491,6 @@ function showContextMenu(x: number, y: number) {
         const key = await invoke<string | null>("get_api_key");
         if (key) state = reduce(state, { type: "set_api_key", key });
       }
-      const interval = await invoke<number>("get_refresh_interval");
-      state = reduce(state, { type: "set_refresh_interval", secs: interval });
       state = reduce(state, { type: "set_mode", mode: "settings" });
     }
     close();

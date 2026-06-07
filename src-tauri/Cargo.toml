@@ -1,6 +1,6 @@
 [package]
 name = "deepseekbar"
-version = "0.1.1"
+version = "0.1.2"
 description = "DeepSeek account balance floating widget"
 authors = ["deepseekbar"]
 edition = "2021"
