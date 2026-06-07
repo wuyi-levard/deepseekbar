@@ -276,3 +276,21 @@ pub fn reset_data(
 pub fn save_file(path: String, content: String) -> Result<(), AppError> {
     std::fs::write(&path, content).map_err(|e| AppError::Other(e.to_string()))
 }
+
+/// Open a URL in the system default browser.
+#[tauri::command]
+pub fn open_url(url: String) -> Result<(), AppError> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/c", "start", "", &url])
+            .spawn()
+            .map_err(|e| AppError::Other(e.to_string()))?;
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = url;
+        return Err(AppError::Other("not implemented".into()));
+    }
+    Ok(())
+}

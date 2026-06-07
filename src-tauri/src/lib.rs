@@ -130,6 +130,7 @@ pub fn run() {
             commands::get_refresh_interval,
             commands::set_refresh_interval,
             commands::save_file,
+            commands::open_url,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

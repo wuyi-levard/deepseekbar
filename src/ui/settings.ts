@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import type { UiState } from "../state";
 import { escapeText } from "../util";
 
@@ -66,8 +67,12 @@ export function renderSettings(
 
       <label class="field">
         <span>余额预警</span>
-        <input type="number" data-role="alert-threshold" min="0" step="0.01" placeholder="0=关闭" />
+        <input type="number" data-role="alert-threshold" min="0" step="0.01" placeholder="留空=关闭预警" />
       </label>
+
+      <div class="row actions">
+        <button data-action="recharge">去充值 ↗</button>
+      </div>
 
       <label class="field">
         <span>主题</span>
@@ -139,7 +144,13 @@ export function renderSettings(
   pinned.addEventListener("change", () => h.onTogglePinned(pinned.checked));
   privacy.addEventListener("change", () => h.onPrivacyToggle(privacy.checked));
   intervalSelect.addEventListener("change", () => h.onIntervalChange(Number(intervalSelect.value)));
-  alertInput.addEventListener("change", () => h.onAlertThreshold(alertInput.value || "0"));
+  alertInput.addEventListener("change", () => h.onAlertThreshold(alertInput.value));
+
+  // Recharge button: open DeepSeek platform in browser
+  root.querySelector<HTMLButtonElement>('[data-action="recharge"]')!
+    .addEventListener("click", async () => {
+      await invoke("open_url", { url: "https://platform.deepseek.com/usage" });
+    });
 
   // Theme picker
   root.querySelectorAll<HTMLButtonElement>(".theme-swatch").forEach(el => {
