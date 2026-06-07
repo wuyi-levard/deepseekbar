@@ -31,6 +31,34 @@ struct GhAsset {
     size: u64,
 }
 
+/// Build a reqwest client with GitHub auth if GITHUB_TOKEN env var is set.
+fn github_client() -> Result<reqwest::Client, AppError> {
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(
+        reqwest::header::ACCEPT,
+        "application/vnd.github+json".parse().unwrap(),
+    );
+    headers.insert(
+        "X-GitHub-Api-Version",
+        "2022-11-28".parse().unwrap(),
+    );
+
+    // Use GITHUB_TOKEN from environment for 5000 req/hr (vs 60 unauthenticated)
+    if let Ok(token) = std::env::var("GITHUB_TOKEN") {
+        let auth = format!("Bearer {token}");
+        headers.insert(
+            reqwest::header::AUTHORIZATION,
+            auth.parse().unwrap(),
+        );
+    }
+
+    reqwest::Client::builder()
+        .user_agent(USER_AGENT)
+        .default_headers(headers)
+        .build()
+        .map_err(|e| AppError::Other(e.to_string()))
+}
+
 /// Compare two semver strings (e.g. "0.1.2" vs "0.2.0").
 fn is_newer(latest: &str, current: &str) -> bool {
     fn parse(v: &str) -> Vec<u32> {
@@ -48,17 +76,8 @@ pub async fn check_update(current_version: &str) -> Result<Option<UpdateInfo>, A
         "https://api.github.com/repos/{}/releases/latest",
         REPO
     );
-    let client = reqwest::Client::builder()
-        .user_agent(USER_AGENT)
-        .build()
-        .map_err(|e| AppError::Other(e.to_string()))?;
-
-    let resp = client
-        .get(&url)
-        .header("Accept", "application/vnd.github+json")
-        .header("X-GitHub-Api-Version", "2022-11-28")
-        .send()
-        .await?;
+    let client = github_client()?;
+    let resp = client.get(&url).send().await?;
 
     let status = resp.status();
     if !status.is_success() {
@@ -105,10 +124,7 @@ pub async fn download_installer(
     app: &tauri::AppHandle,
     version: &str,
 ) -> Result<PathBuf, AppError> {
-    let client = reqwest::Client::builder()
-        .user_agent(USER_AGENT)
-        .build()
-        .map_err(|e| AppError::Other(e.to_string()))?;
+    let client = github_client()?;
     let resp = client.get(url).send().await?;
 
     let total = resp.content_length().unwrap_or(0);
