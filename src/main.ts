@@ -130,9 +130,9 @@ const settingsHandlers = (): SettingsHandlers => ({
     state = reduce(state, { type: "set_update_checking" });
     render();
     try {
-      const info = await invoke<{ version: string; body: string } | null>("check_update");
-      if (info) {
-        state = reduce(state, { type: "set_update_available", info });
+      const version = await invoke<string | null>("check_update");
+      if (version) {
+        state = reduce(state, { type: "set_update_available", version });
       } else {
         state = reduce(state, { type: "set_update_error", message: t().setUpdateUpToDate });
       }
@@ -140,21 +140,6 @@ const settingsHandlers = (): SettingsHandlers => ({
       state = reduce(state, { type: "set_update_error", message: String(e) });
     }
     render();
-  },
-  onDownloadUpdate: async () => {
-    state = reduce(state, { type: "set_update_progress", percent: 0 });
-    render();
-    try {
-      await invoke("download_update");
-    } catch (e) {
-      state = reduce(state, { type: "set_update_error", message: String(e) });
-      render();
-    }
-  },
-  onInstallUpdate: async () => {
-    if (state.updatePath) {
-      await invoke("install_update", { path: state.updatePath });
-    }
   },
   onSave: async (key) => {
     await invoke("save_api_key", { key });
@@ -331,18 +316,6 @@ async function init() {
       state = reduce(state, { type: "refresh_started" });
       render();
       await invoke("trigger_refresh");
-    }),
-    await listen<{ downloaded: number; total: number; percent: number }>("update:progress", (e) => {
-      state = reduce(state, { type: "set_update_progress", percent: e.payload.percent });
-      render();
-    }),
-    await listen<{ path: string; version: string }>("update:downloaded", (e) => {
-      state = reduce(state, { type: "set_update_done", path: e.payload.path, version: e.payload.version });
-      render();
-    }),
-    await listen<{ message: string }>("update:error", (e) => {
-      state = reduce(state, { type: "set_update_error", message: e.payload.message });
-      render();
     }),
   );
 

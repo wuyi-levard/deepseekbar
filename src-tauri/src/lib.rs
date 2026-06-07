@@ -133,8 +133,7 @@ pub fn run() {
             commands::save_file,
             commands::open_url,
             commands::check_update,
-            commands::download_update,
-            commands::install_update,
+            commands::open_releases,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

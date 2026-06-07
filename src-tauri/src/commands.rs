@@ -297,50 +297,24 @@ pub fn open_url(url: String) -> Result<(), AppError> {
 
 // ---- online update ----
 
+/// Returns Some("X.Y.Z") if a newer version is available on GitHub.
 #[tauri::command]
-pub async fn check_update() -> Result<Option<crate::updater::UpdateInfo>, AppError> {
+pub async fn check_update() -> Result<Option<String>, AppError> {
     let current = env!("CARGO_PKG_VERSION");
     crate::updater::check_update(current).await
 }
 
+/// Open the GitHub Releases page in the default browser.
 #[tauri::command]
-pub async fn download_update(app: AppHandle) -> Result<(), AppError> {
-    let current = env!("CARGO_PKG_VERSION");
-
-    // Check for update first to get the download URL
-    let info = crate::updater::check_update(current)
-        .await?
-        .ok_or_else(|| AppError::Other("already up to date".into()))?;
-
-    let app_clone = app.clone();
-    let version = info.version.clone();
-
-    tauri::async_runtime::spawn(async move {
-        match crate::updater::download_installer(&info.download_url, &app_clone, &version).await {
-            Ok(path) => {
-                let _ = app_clone.emit("update:downloaded", serde_json::json!({
-                    "path": path.to_string_lossy(),
-                    "version": version,
-                }));
-            }
-            Err(e) => {
-                let _ = app_clone.emit("update:error", serde_json::json!({
-                    "message": e.to_string(),
-                }));
-            }
-        }
-    });
-
-    Ok(())
-}
-
-#[tauri::command]
-pub fn install_update(path: String) -> Result<(), AppError> {
+pub fn open_releases() -> Result<(), AppError> {
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new(&path)
+        std::process::Command::new("cmd")
+            .args(["/c", "start", "", crate::updater::releases_url()])
             .spawn()
             .map_err(|e| AppError::Other(e.to_string()))?;
     }
-    std::process::exit(0);
+    #[cfg(not(target_os = "windows"))]
+    return Err(AppError::Other("not implemented".into()));
+    Ok(())
 }

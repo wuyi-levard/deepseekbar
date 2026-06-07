@@ -103,10 +103,8 @@ const zh = {
   setCheckUpdate: "检查更新",
   setUpdateChecking: "检查中…",
   setUpdateUpToDate: "已是最新版本",
-  setUpdateDownload: (v: string) => `下载 v${v}`,
-  setUpdateDownloading: (p: number) => `下载中 ${p}%`,
-  setUpdateInstall: "安装更新",
-  setUpdateError: "更新失败",
+  setUpdateAvailable: (v: string) => `发现新版本 v${v}，点击下载`,
+  setUpdateError: "检查失败",
 };
 
 const en: typeof zh = {
@@ -185,10 +183,8 @@ const en: typeof zh = {
   setCheckUpdate: "Check for Updates",
   setUpdateChecking: "Checking…",
   setUpdateUpToDate: "Up to date",
-  setUpdateDownload: (v: string) => `Download v${v}`,
-  setUpdateDownloading: (p: number) => `Downloading ${p}%`,
-  setUpdateInstall: "Install Update",
-  setUpdateError: "Update failed",
+  setUpdateAvailable: (v: string) => `v${v} available — click to download`,
+  setUpdateError: "Check failed",
 };
 
 // ---------------------------------------------------------------------------

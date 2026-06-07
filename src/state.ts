@@ -17,11 +17,9 @@ export interface UiState {
   alertThreshold?: string;
   alertMessage: string | null;
   lastRefreshMs: number;
-  updateStatus: "idle" | "checking" | "available" | "downloading" | "done" | "error";
-  updateInfo: { version: string; body: string } | null;
-  updateProgress: number;
+  updateStatus: "idle" | "checking" | "available" | "error";
+  updateVersion: string;
   updateMessage: string;
-  updatePath: string;
   privacyMode: boolean;
   theme: string;
 }
@@ -39,10 +37,8 @@ export const initialState: UiState = {
   alertMessage: null,
   lastRefreshMs: 0,
   updateStatus: "idle",
-  updateInfo: null,
-  updateProgress: 0,
+  updateVersion: "",
   updateMessage: "",
-  updatePath: "",
   privacyMode: false,
   theme: "deepseek",
 };
@@ -63,9 +59,7 @@ export type Action =
   | { type: "set_alert"; message: string }
   | { type: "clear_alert" }
   | { type: "set_update_checking" }
-  | { type: "set_update_available"; info: { version: string; body: string } }
-  | { type: "set_update_progress"; percent: number }
-  | { type: "set_update_done"; path: string; version: string }
+  | { type: "set_update_available"; version: string }
   | { type: "set_update_error"; message: string }
   | { type: "set_privacy_mode"; enabled: boolean }
   | { type: "set_theme"; theme: string };
@@ -128,13 +122,9 @@ export function reduce(s: UiState, a: Action): UiState {
     case "clear_alert":
       return { ...s, alertMessage: null };
     case "set_update_checking":
-      return { ...s, updateStatus: "checking", updateMessage: "", updateProgress: 0 };
+      return { ...s, updateStatus: "checking", updateMessage: "" };
     case "set_update_available":
-      return { ...s, updateStatus: "available", updateInfo: a.info };
-    case "set_update_progress":
-      return { ...s, updateStatus: "downloading", updateProgress: a.percent };
-    case "set_update_done":
-      return { ...s, updateStatus: "done", updatePath: a.path, updateMessage: a.version, updateProgress: 100 };
+      return { ...s, updateStatus: "available", updateVersion: a.version };
     case "set_update_error":
       return { ...s, updateStatus: "error", updateMessage: a.message };
     case "set_privacy_mode":
